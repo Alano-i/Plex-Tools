@@ -206,24 +206,100 @@ class plexsortout:
             libtable.append(lib.copy())
         return libtable
 
+    # 解锁海报和背景
+    def process_unlock_poster_and_art(self,video):
+        locked_info = []
+        locked_info = video.fields
+        if locked_info:
+            _LOGGER.info(f'「{video.title}」元数据锁定情况：{locked_info}')
+        else:
+            _LOGGER.info(f'「{video.title}」没有锁定任何元数据')
+        video.unlockArt()
+        video.unlockPoster()
+        _LOGGER.info(f'「{video.title}」海报和背景已经解锁，PLEX 服务器可以自动更新了\n')
+    # 锁定海报和背景
+    def process_lock_poster_and_art(self,video):
+        locked_info = []
+        locked_info = video.fields
+        if locked_info:
+            _LOGGER.info(f'「{video.title}」元数据锁定情况：{locked_info}')
+        else:
+            _LOGGER.info(f'「{video.title}」没有锁定任何元数据')
+        video.lockArt()
+        video.lockPoster()
+        _LOGGER.info(f'「{video.title}」海报和背景已经锁定，PLEX 服务器不会再自动更新了\n')
     # 筛选fanart封面
     def process_fanart(self,video):
-        TypeDic={
-            'show':MediaType.TV,
-            'movie':MediaType.Movie
-        }
-        posters = video.posters()
-        print(video.title)
-        if len(posters) > 0:
-            if posters[0].provider == 'fanarttv':
-                return
-            for poster in posters:
-                if poster.provider == 'fanarttv':
-                    video.setPoster(poster)
-                    break
-            _LOGGER.info(f'「{video.title}」Fanart 精美封面筛选完成')
+        locked_info = []
+        locked_info = video.fields
+        if locked_info:
+            _LOGGER.info(f'「{video.title}」元数据锁定情况：{locked_info}')
         else:
-            _LOGGER.info(f'「{video.title}」在 Fanart 中没有海报')
+            _LOGGER.info(f'「{video.title}」没有锁定任何元数据')
+        # if 'art' in [field.name for field in video.fields] and 'thumb' in [field.name for field in movie.fields]:
+        if {'art', 'thumb'}.issubset(field.name for field in locked_info):
+            _LOGGER.info(f'「{video.title}」当前海报和背景已经锁定，不做修改！')
+            return
+        # TypeDic={
+        #     'show':MediaType.TV,
+        #     'movie':MediaType.Movie
+        # }
+        if 'thumb' not in [field.name for field in locked_info]:
+            posters = video.posters()
+            # _LOGGER.info(f'「{video.title}」posters:{posters}')
+            print(video.title)
+            if len(posters) > 0:
+                # if posters[0].provider == 'fanarttv':
+                #     return
+                has_fanart_poster = False
+                for poster in posters:
+                    # if poster.provider == 'fanarttv':
+                    #     video.setPoster(poster)
+                    #     break
+                    if poster.provider == 'fanarttv' and poster.selected:
+                        _LOGGER.info(f'「{video.title}」当前选择的海报已经是 Fanart 封面，不做修改！')
+                        has_fanart_poster = True
+                        break
+                    elif poster.provider == 'fanarttv':
+                        # 设置当前海报为展示海报
+                        video.setPoster(poster)
+                        _LOGGER.info(f'「{video.title}」Fanart 海报筛选完成,并已锁定，PLEX 服务器不会再自动更新了')
+                        has_fanart_poster = True
+                        break
+                if not has_fanart_poster:
+                    _LOGGER.info(f'「{video.title}」在 Fanart 中没有海报')
+                # 锁定海报元数据
+                video.lockPoster()
+            else:
+                _LOGGER.info(f'「{video.title}」没有海报')
+        else:
+            _LOGGER.info(f'「{video.title}」当前选择的海报已经锁定，不做修改！')
+
+        if 'art' not in [field.name for field in locked_info]:
+            arts = video.arts()
+            # _LOGGER.info(f'「{video.title}」arts:{arts}')
+            if len(arts) > 0:
+                has_fanart_art = False
+                for art in arts:
+                    if art.provider == 'fanarttv' and art.selected:
+                        video.lockArt()
+                        _LOGGER.info(f'「{video.title}」当前选择的背景已经是 Fanart 背景，不做修改！')
+                        has_fanart_art = True
+                        return
+                    elif art.provider == 'fanarttv':
+                        # 设置选中当前背景为展示背景
+                        video.setArt(art)
+                        # 锁定背景元数据
+                        video.lockArt()
+                        _LOGGER.info(f'「{video.title}」Fanart 背景筛选完成,并已锁定，PLEX 服务器不会再自动更新了')
+                        has_fanart_art = True
+                        break
+                if not has_fanart_art:
+                    _LOGGER.info(f'「{video.title}」在 Fanart 中没有背景')
+            else:
+                _LOGGER.info(f'「{video.title}」没有背景')
+        else:
+            _LOGGER.info(f'「{video.title}」当前选择的背景已经锁定，不做修改！')
         
 
     # 排序修改为首字母
@@ -362,9 +438,9 @@ class plexsortout:
                 # video.reload()
                 genres = video.genres
                 self.updategenre(video, genres)
-    
+        
     # 手动选择媒体库整理
-    def process_all(self,library,sortoutNum):
+    def process_all(self,library,sortoutNum,is_lock):
         libtable=library
         for i in range(len(libtable)):
             _LOGGER.info(f"{plugins_name}现在开始处理媒体库 ['{libtable[i]}']")
@@ -378,11 +454,22 @@ class plexsortout:
                 collections=videos_lib.collections()
                 for collection in collections:
                     _LOGGER.info(f"{plugins_name}开始处理合集 ['{collection.title}']")
-                    # 判断标题排序和标题是否相同,如果是不相同则视为手动修改过，不处理。
-                    if collection.titleSort != collection.title:
-                        _LOGGER.info(f"「{collection.title}」合集的标题排序为: ['{collection.titleSort}'], 已锁定或手动调整过，不进行翻译替换\n")
+
+                    if is_lock == 'run_locked':
+                        self.process_lock_poster_and_art(collection)
+                        # _LOGGER.info(f"「{collection.title}」手动锁定海报和背景完成!\n")
+                    elif is_lock == 'run_unlocked':
+                        self.process_unlock_poster_and_art(collection)
+                        # _LOGGER.info(f"「{collection.title}」手动解锁海报和背景完成!\n")
                     else:
-                        self.process_sorttitle(collection)
+                        if self.config_Poster:
+                                self.process_fanart(collection)
+                        # 判断标题排序和标题是否相同,如果是不相同则视为手动修改过，不处理。
+                        if collection.titleSort != collection.title and self.config_SortTitle:
+                            _LOGGER.info(f"「{collection.title}」合集的标题排序为: ['{collection.titleSort}'], 已锁定或手动调整过，不进行翻译替换\n")
+                        else:
+                            self.process_sorttitle(collection)
+
             #处理视频
             video_len=len(videos)
             if str(sortoutNum).lower() != 'all':
@@ -397,22 +484,35 @@ class plexsortout:
                 video_num = video_len
             for video,i in zip(videos,range(video_num)):
                 _LOGGER.info(f"{plugins_name}开始处理 ['{video.title}']")
-                #fanart筛选
-                if self.config_Poster:
-                    self.process_fanart(video)
-                #标签翻译整理
-                if self.config_Genres:
-                    self.process_tag(video)
-                #首字母排序
-                if self.config_SortTitle:
-                    self.process_sorttitle(video)
 
-        _LOGGER.info(f"{plugins_name}手动运行整理完成!")
+                if is_lock == 'run_locked':
+                    self.process_lock_poster_and_art(video)
+                    # _LOGGER.info(f"「{video.title}」手动锁定海报和背景完成!\n")
+                elif is_lock == 'run_unlocked':
+                    self.process_unlock_poster_and_art(video)
+                    # _LOGGER.info(f"「{video.title}」手动解锁海报和背景完成!\n")
+                else:
+                    # _LOGGER.info(f"{plugins_name}video.type ['{video.type}']")
+                    #fanart筛选
+                    if self.config_Poster:
+                        self.process_fanart(video)
+                    #标签翻译整理
+                    if self.config_Genres:
+                        self.process_tag(video)
+                    #首字母排序
+                    if self.config_SortTitle:
+                        self.process_sorttitle(video)
+            result = {
+                "run_locked": "手动锁定海报和背景完成!",
+                "run_unlocked": "手动解锁海报和背景完成!",
+                "run_all": "手动运行整理完成!"
+            }
+            _LOGGER.info(f"{plugins_name}{result[is_lock]}")
         # else:
         #     _LOGGER.error(f'{plugins_name}仅支持配置了 PLEX 媒体库的用户使用')
 
     # 自动整理指定库最近新添加项
-    def process(self):
+    def process(self, librarySectionTitle):
         sortout_num = 6
         recently_added_videos = []
         recently_added_collections = []
@@ -422,12 +522,15 @@ class plexsortout:
             for library in self.plexserver.library.sections():
                 for collection in library.collections():
                     recently_added_collections.append(collection)
-            _LOGGER.info(f"{plugins_name}未指定库或设置为ALL，将整理全库中的最近 {sortout_num} 项")
+            _LOGGER.info(f"{plugins_name}未指定需要整理的媒体库或设置为ALL，将整理全库中的最近 {sortout_num} 项")
             # _LOGGER.error(f"{plugins_name}所有库最近 {sortout_num} 项：{recently_added_videos[:sortout_num]}")
             # _LOGGER.error(f"{plugins_name}所有库最近 {sortout_num} 项：{recently_added_collections[:sortout_num]}")
         else:
-            library_names=self.config_LIBRARY.split(',')
-            _LOGGER.info(f"{plugins_name}指定库为：{library_names}")
+            library_names = self.config_LIBRARY.split(',')
+            _LOGGER.info(f"{plugins_name}指定需要整理的媒体库为：{library_names}")
+            if librarySectionTitle and librarySectionTitle not in library_names:
+                _LOGGER.info(f"{plugins_name}新入库媒体所属库为：['{librarySectionTitle}']，不属于需要整理的媒体库，跳过整理！")
+                return
             _LOGGER.info(f"{plugins_name}开始整理指定库中最近添加的 {sortout_num} 个媒体和合集")
             # 获取所有指定库中最近添加的 sortout_num 项
             for library_name in library_names:
@@ -451,17 +554,20 @@ class plexsortout:
         # _LOGGER.error(f"{plugins_name}所有指定库最近 {sortout_num} 个合集，排序后：\n{recently_added_collections}")
         # _LOGGER.error(f"{plugins_name}所有指定库最近 {sortout_num} 项，排序后：\n{recently_added_videos}")
         
-        # 整理最近添加的合集
         for videoNum, collection in enumerate(recently_added_collections):
             if videoNum > sortout_num - 1:
                 break
             if self.config_Collection and collection:
                 _LOGGER.info(f"{plugins_name}开始处理合集 ['{collection.title}']")
                 # 判断标题排序和标题是否相同,如果是不相同则视为手动修改过，不处理。
-                if collection.titleSort != collection.title:
+                if self.config_Poster:
+                    self.process_fanart(collection)
+                if collection.titleSort != collection.title and self.config_SortTitle:
                     _LOGGER.info(f"「{collection.title}」合集的标题排序为: ['{collection.titleSort}'], 已锁定或手动调整过，不进行翻译替换\n")
                 else:
                     self.process_sorttitle(collection)
+
+
         # 整理最近添加的媒体
         for videoNum, video in enumerate(recently_added_videos):
             if videoNum > sortout_num - 1:
