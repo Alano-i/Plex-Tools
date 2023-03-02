@@ -2,6 +2,7 @@ import logging
 
 import sys
 from moviebotapi.core.models import MediaType
+# from plexapi.server import PlexServer
 
 RECOVER = 1
 ENABLE_LOG = 1
@@ -131,6 +132,9 @@ class plexsortout:
         self.servertype = servertype
     def setconfig(self,config):
         self.config = config
+        # self.config_plex_url = self.config.get('plex_url')
+        # self.config_plex_token = self.config.get('plex_token')
+        # self.plexserver = PlexServer(self.config_plex_url, self.config_plex_token)
         self.config_Collection = self.config.get('Collection')
         self.config_Poster = self.config.get('Poster')
         self.config_Genres = self.config.get('Genres')
@@ -138,7 +142,29 @@ class plexsortout:
         self.config_Top250 = self.config.get('Top250')
         self.config_SelfGenres = self.config.get('SelfGenres')
         self.config_LIBRARY = self.config.get('LIBRARY')
+        self.config_mbot_url = self.config.get('mbot_url')
+        webhook_url = f'{self.config_mbot_url}/api/plugins/get_plex_event/webhook'
+        # 开启webhooks开关
+        webhooks_enabled = self.plexserver.settings.get('webHooksEnabled').set(True)
+        # webhooks_enabled.set(True)
+        self.plexserver.settings.save()
+        # if not webhooks_enabled.value:
+        #     # _LOGGER.info(f"{plugins_name}PLEX 的 webhook 开关未打开，将自动打开！")
+        #     webhooks_enabled.set(True)
+        #     self.plexserver.settings.save()
+        # else:
+        #     _LOGGER.info(f"{plugins_name}PLEX 的 webhook 开关已打开")
 
+        # 自动设置 webhooks
+        account = self.plexserver.myPlexAccount()
+        webhooks = account.webhooks()
+        if webhook_url not in webhooks:
+            webhooks.append(webhook_url)
+            account.setWebhooks(webhooks)
+            _LOGGER.info(f"{plugins_name} 已向 PLEX 服务器添加 Webhook")
+        else:
+            _LOGGER.info(f"{plugins_name} PLEX 服务器 Webhook 列表中已存在此 Webhook 链接")
+            
     def uniqify(self, seq):
         keys = {}
         for e in seq:
