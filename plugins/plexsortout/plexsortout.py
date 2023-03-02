@@ -247,7 +247,7 @@ class plexsortout:
         if 'thumb' not in [field.name for field in locked_info]:
             posters = video.posters()
             # _LOGGER.info(f'「{video.title}」posters:{posters}')
-            print(video.title)
+            # print(video.title)
             if len(posters) > 0:
                 # if posters[0].provider == 'fanarttv':
                 #     return
@@ -282,20 +282,19 @@ class plexsortout:
                 has_fanart_art = False
                 for art in arts:
                     if art.provider == 'fanarttv' and art.selected:
-                        video.lockArt()
                         _LOGGER.info(f'「{video.title}」当前选择的背景已经是 Fanart 背景，不做修改！')
                         has_fanart_art = True
                         return
                     elif art.provider == 'fanarttv':
                         # 设置选中当前背景为展示背景
                         video.setArt(art)
-                        # 锁定背景元数据
-                        video.lockArt()
                         _LOGGER.info(f'「{video.title}」Fanart 背景筛选完成,并已锁定，PLEX 服务器不会再自动更新了')
                         has_fanart_art = True
                         break
                 if not has_fanart_art:
                     _LOGGER.info(f'「{video.title}」在 Fanart 中没有背景')
+                # 锁定背景元数据
+                video.lockArt()
             else:
                 _LOGGER.info(f'「{video.title}」没有背景')
         else:
@@ -445,6 +444,10 @@ class plexsortout:
         for i in range(len(libtable)):
             _LOGGER.info(f"{plugins_name}现在开始处理媒体库 ['{libtable[i]}']")
             videos_lib = self.plexserver.library.section(libtable[i])
+            # _LOGGER.error(f"videos_lib.type:{videos_lib.type}")
+            if videos_lib.type == 'photo':
+                _LOGGER.info(f"「{libtable[i]}」是照片库，跳过整理\n")
+                continue
             videos = videos_lib.all()
             # _LOGGER.error(f"{plugins_name}未排序前：\n{videos}")
             videos.sort(key=lambda video: video.addedAt, reverse=True)
@@ -520,6 +523,7 @@ class plexsortout:
         if self.config_LIBRARY == 'ALL' or not self.config_LIBRARY:
             recently_added_videos = self.plexserver.library.recentlyAdded()
             for library in self.plexserver.library.sections():
+                if library.type == 'photo': continue
                 for collection in library.collections():
                     recently_added_collections.append(collection)
             _LOGGER.info(f"{plugins_name}未指定需要整理的媒体库或设置为ALL，将整理全库中的最近 {sortout_num} 项")
@@ -535,6 +539,7 @@ class plexsortout:
             # 获取所有指定库中最近添加的 sortout_num 项
             for library_name in library_names:
                 library = self.plexserver.library.section(library_name)
+                if library.type == 'photo': continue
                 collections = library.collections()
                 # _LOGGER.error(f"{library_name}中的库0：{collections}")
                 # 库中最近添加媒体
