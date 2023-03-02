@@ -80,15 +80,23 @@ def webhook():
     global last_event_time, last_event_count
     payload = request.form['payload']
     data = json.loads(payload)
-    plex_event = data['event']
-    if 'Metadata' in data:
-        librarySectionTitle = data['Metadata']['librarySectionTitle']
-    else:
-        librarySectionTitle = ''
+
+    # plex_event = data['event']
+
+    plex_event = data.get('event', '')
+    metadata = data.get('Metadata', '')
+
+    librarySectionTitle = metadata.get('librarySectionTitle', '')
+    
+    # 媒体库类型：show artist movie photo
+    librarySectionType = metadata.get('librarySectionType', '')
+    # 如果是照片库直接跳过
+    if librarySectionType == 'photo': return api_result(code=0, message=plex_event, data=data)
     if plex_event in ['library.on.deck', 'library.new'] and added:
-        if time.time() - last_event_time < 10:
+    # if plex_event in ['library.on.deck', 'library.new', 'media.play', 'media.pause', 'media.resume'] and added:
+        if time.time() - last_event_time < 15:
             last_event_count = last_event_count + 1
-            _LOGGER.info(f'{plugins_name}10 秒内接收到 {last_event_count} 条入库事件，只处理一次')
+            _LOGGER.info(f'{plugins_name}15 秒内接收到 {last_event_count} 条入库事件，只处理一次')
         else:
             last_event_time = time.time()
             last_event_count = 1
