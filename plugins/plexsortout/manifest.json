@@ -7,6 +7,13 @@
   "requirements": null,
   "configField": [
     {
+      "fieldName": "mbot_url",
+      "fieldType": "String",
+      "label": "Mbot 与 PLEX 同一局域的IP或域名，示例：http://10.10.10.3:1329",
+      "helperText": "用于接收 PLEX 发送的入库事件",
+      "defaultValue": "http://10.10.10.3:1329"
+    },
+    {
       "fieldName": "Added",
       "fieldType": "Bool",
       "label": "使用Plex入库事件作为触发运行,默认MR下载完成时运行",
