@@ -5,6 +5,7 @@ from flask import Blueprint, request
 from mbot.common.flaskutils import api_result
 import json
 import time
+# from plexapi.server import PlexServer
 
 from mbot.core.event.models import EventType
 from mbot.core.plugins import PluginContext,PluginMeta,plugin
@@ -26,12 +27,13 @@ def after_setup(plugin: PluginMeta, plugin_conf: dict):
     插件加载后执行的操作
     """
     _LOGGER.info(f'{plugins_name}插件开始加载')
+    # global added, libtable , plex_url, plex_token
     global added, libtable
     added = plugin_conf.get('Added') if plugin_conf.get('Added') else None
     if added:
-        _LOGGER.info(f'{plugins_name}使用「PLEX入库事件」作为触发运行')
+        _LOGGER.info(f'{plugins_name}使用「PLEX 入库事件」作为触发运行')
     else:
-        _LOGGER.info(f'{plugins_name}使用「MR 下载完成事件」作为触发运行')
+        _LOGGER.info(f'{plugins_name}使用「Mbot 下载完成事件」作为触发运行')
     libstr = plugin_conf.get('LIBRARY')
     if libstr:
         libtable=libstr.split(',')
@@ -40,6 +42,21 @@ def after_setup(plugin: PluginMeta, plugin_conf: dict):
     else:
         _LOGGER.info(f'{plugins_name}未设置需要整理的媒体库名称')
         plugin_conf['library'] = 'ALL'
+    
+    # plex_url = plugin_conf.get('plex_url')
+    # plex_token = plugin_conf.get('plex_token')
+    # plex = PlexServer(plex_url, plex_token)
+
+    # # 开启webhooks
+    # settings = plex.settings
+    # if not settings._settings['webHooksEnabled'].value:
+    #     _LOGGER.info(f"{plugins_name}PLEX 的 webhook 开关未打开，将自动打开！")
+    #     settings._settings['webHooksEnabled'].set(True)
+    #     plex.settings.save()
+    # else:
+    #     _LOGGER.info(f"{plugins_name}PLEX 的 webhook 开关已打开")
+    
+    # 传递设置参数
     plexst.setconfig(plugin_conf)
     _LOGGER.info(f'{plugins_name}自定义参数加载完成')
     # printAllMembers(plexst)
@@ -53,20 +70,35 @@ def config_changed(plugin_conf: dict):
     global added, libtable
     added = plugin_conf.get('Added') if plugin_conf.get('Added') else None
     if added:
-        _LOGGER.info(f'{plugins_name}使用「PLEX入库事件」作为触发运行')
+        _LOGGER.info(f'{plugins_name}使用「PLEX 入库事件」作为触发运行')
     else:
-        _LOGGER.info(f'{plugins_name}使用「MR 下载完成事件」作为触发运行')
+        _LOGGER.info(f'{plugins_name}使用「Mbot 下载完成事件」作为触发运行')
     libstr = plugin_conf.get('LIBRARY')
     if libstr:
         libtable=libstr.split(',')
         _LOGGER.info(f'{plugins_name}需要整理的库：{libtable}')
-
         plugin_conf['library']=libtable
     else:
         _LOGGER.info(f'{plugins_name}未设置需要整理的媒体库名称')
         plugin_conf['library'] = 'ALL'
+    
+    # plex_url = plugin_conf.get('plex_url')
+    # plex_token = plugin_conf.get('plex_token')
+    # plex = PlexServer(plex_url, plex_token)
+    
+    # # 开启webhooks
+    # settings = plex.settings
+    # if not settings._settings['webHooksEnabled'].value:
+    #     _LOGGER.info(f"{plugins_name}PLEX 的 webhook 开关未打开，将自动打开！")
+    #     settings._settings['webHooksEnabled'].set(True)
+    #     plex.settings.save()
+    # else:
+    #     _LOGGER.info(f"{plugins_name}PLEX 的 webhook 开关已打开")
+    
+    # 传递设置参数
     plexst.setconfig(plugin_conf)
     _LOGGER.info(f'{plugins_name}自定义参数加载完成')
+    # printAllMembers(plexst)
 
 def printAllMembers(cls):
     print('\n'.join(dir(cls)))
