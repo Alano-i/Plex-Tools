@@ -107,8 +107,12 @@ def get_imdb_top_250():
         imdb_ids = [id.split('/')[2] for id in imdb_ids]
         imdb_top250_chinese_name = []
         for imdb_id in imdb_ids:
-            chinese_name = get_chinese_name(imdb_id)
-            imdb_top250_chinese_name.append(chinese_name)
+            try:
+                chinese_name = get_chinese_name(imdb_id)
+                imdb_top250_chinese_name.append(chinese_name)
+            except Exception as e:
+                _LOGGER.error(f"{plugins_name} 获取影片中文名失败，请检查网络，原因：{e}")
+                break
         #    _LOGGER.info(imdb_top250_chinese_name)
     else:
         _LOGGER.error(f'{plugins_name}获取 IMDB TOP250 电影的 TMDb ID 失败')
