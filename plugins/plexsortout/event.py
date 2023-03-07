@@ -10,6 +10,7 @@ import time
 from mbot.core.event.models import EventType
 from mbot.core.plugins import PluginContext,PluginMeta,plugin
 from . import plexst
+from .get_top250 import get_top250_config
 
 _LOGGER = logging.getLogger(__name__)
 plugins_name = '「PLEX 工具箱」'
@@ -57,6 +58,7 @@ def after_setup(plugin: PluginMeta, plugin_conf: dict):
     #     _LOGGER.info(f"{plugins_name}PLEX 的 webhook 开关已打开")
     
     # 传递设置参数
+    get_top250_config(plugin_conf)
     plexst.setconfig(plugin_conf)
     _LOGGER.info(f'{plugins_name}自定义参数加载完成')
     # printAllMembers(plexst)
@@ -96,6 +98,7 @@ def config_changed(plugin_conf: dict):
     #     _LOGGER.info(f"{plugins_name}PLEX 的 webhook 开关已打开")
     
     # 传递设置参数
+    get_top250_config(plugin_conf)
     plexst.setconfig(plugin_conf)
     _LOGGER.info(f'{plugins_name}自定义参数加载完成')
     # printAllMembers(plexst)
@@ -112,26 +115,23 @@ def webhook():
     global last_event_time, last_event_count
     payload = request.form['payload']
     data = json.loads(payload)
-
     # plex_event = data['event']
-
     plex_event = data.get('event', '')
-    metadata = data.get('Metadata', '')
-
-    librarySectionTitle = metadata.get('librarySectionTitle', '')
-    
-    # 媒体库类型：show artist movie photo
-    librarySectionType = metadata.get('librarySectionType', '')
-    # 如果是照片库直接跳过
-    if librarySectionType == 'photo': return api_result(code=0, message=plex_event, data=data)
-    if plex_event in ['library.on.deck', 'library.new'] and added:
     # if plex_event in ['library.on.deck', 'library.new', 'media.play', 'media.pause', 'media.resume'] and added:
-        if time.time() - last_event_time < 15:
+    if plex_event in ['library.on.deck', 'library.new'] and added:
+        metadata = data.get('Metadata', '')
+        librarySectionTitle = metadata.get('librarySectionTitle', '')
+        # 媒体库类型：show artist movie photo
+        librarySectionType = metadata.get('librarySectionType', '')
+        # 如果是照片库直接跳过
+        if librarySectionType == 'photo': return api_result(code=0, message=plex_event, data=data)
+        if time.time() - last_event_time < 75:
             last_event_count = last_event_count + 1
-            _LOGGER.info(f'{plugins_name}15 秒内接收到 {last_event_count} 条入库事件，只处理一次')
+            _LOGGER.info(f'{plugins_name}75 秒内接收到 {last_event_count} 条入库事件，只处理一次')
         else:
             last_event_time = time.time()
             last_event_count = 1
+            time.sleep(60)
             _LOGGER.info(f'{plugins_name}接收到 PLEX 通过 Webhook 传过来的「入库事件」，开始整理')
             # 执行自动整理
             plexst.process(librarySectionTitle)
