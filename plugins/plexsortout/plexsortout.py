@@ -160,6 +160,7 @@ class plexsortout:
         webhook_url = f'{self.config_mbot_url}/api/plugins/get_plex_event/webhook'
         # 开启webhooks开关
         webhooks_enabled = self.plexserver.settings.get('webHooksEnabled').set(True)
+        push_notifications_enabled = self.plexserver.settings.get('pushNotificationsEnabled').set(True)
         # webhooks_enabled.set(True)
         self.plexserver.settings.save()
         # if not webhooks_enabled.value:
