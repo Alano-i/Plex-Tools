@@ -3,15 +3,17 @@ import logging
 import sys
 from moviebotapi.core.models import MediaType
 # from plexapi.server import PlexServer
+from mbot.openapi import mbot_api
+import pypinyin
+import re
+import time
 
+server = mbot_api
 RECOVER = 1
 ENABLE_LOG = 1
 _LOGGER = logging.getLogger(__name__)
-
-import pypinyin
-import re
 plugins_name = '「PLEX 工具箱」'
-IMDBTop250 = {'肖申克的救赎', '教父', '教父2', '蝙蝠侠：黑暗骑士', '十二怒汉', '辛德勒的名单', '指环王3：国王归来',
+IMDBTop250 = ['肖申克的救赎', '教父', '教父2', '蝙蝠侠：黑暗骑士', '十二怒汉', '辛德勒的名单', '指环王3：国王归来',
               '低俗小说', '黄金三镖客', '指环王1：魔戒现身', '搏击俱乐部', '阿甘正传', '盗梦空间', '指环王2：双塔奇兵',
               '星球大战2：帝国反击战', '黑客帝国', '好家伙', '飞越疯人院', '七武士', '七宗罪', '美丽人生', '上帝之城',
               '沉默的羔羊', '生活多美好', '星球大战', '拯救大兵瑞恩', '绿里奇迹', '千与千寻', '星际穿越', '寄生虫',
@@ -42,8 +44,8 @@ IMDBTop250 = {'肖申克的救赎', '教父', '教父2', '蝙蝠侠：黑暗骑�
               '极速风流', '恐惧的代价', '万世魔星', '怒火青春', '四百击', '圣女贞德蒙难记', '聚焦', '卢旺达饭店',
               '爱情是狗娘', '瓦塞浦黑帮', '安德烈·卢布廖夫', '洛奇', '怪兽电力公司', '风之谷', '流浪者之歌', '蝴蝶梦',
               '爱在日落黄昏时', '芭萨提的颜色', '男人的争斗', '花样年华', '德州巴黎', '一夜风流', '燃烧女子的肖像',
-              '误杀瞒天记', '较量', '声之形', '看不见的客人', '阿尔及尔之战', '帮助', '故土'}
-DouBanTop250 = {'肖申克的救赎', '霸王别姬', '阿甘正传', '泰坦尼克号', '这个杀手不太冷', '美丽人生', '千与千寻',
+              '误杀瞒天记', '较量', '声之形', '看不见的客人', '阿尔及尔之战', '帮助', '故土']
+DouBanTop250 = ['肖申克的救赎', '霸王别姬', '阿甘正传', '泰坦尼克号', '这个杀手不太冷', '美丽人生', '千与千寻',
                 '辛德勒的名单', '盗梦空间', '星际穿越', '忠犬八公的故事', '楚门的世界', '海上钢琴师', '三傻大闹宝莱坞',
                 '机器人总动员', '放牛班的春天', '无间道', '疯狂动物城', '大话西游之大圣娶亲', '控方证人', '熔炉',
                 '教父', '当幸福来敲门', '触不可及', '怦然心动', '龙猫', '末代皇帝', '寻梦环游记', '蝙蝠侠：黑暗骑士',
@@ -77,7 +79,19 @@ DouBanTop250 = {'肖申克的救赎', '霸王别姬', '阿甘正传', '泰坦尼
                 '崖上的波妞', '彗星来的那一夜', '黑客帝国2：重装上阵', '步履不停', '魂断蓝桥', '战争之王', '爱乐之城',
                 '末路狂花', '谍影重重2', '火星救援', '燃情岁月', '千年女优', '阿飞正传', '花束般的恋爱',
                 '再次出发之纽约遇见你', '谍影重重', '朗读者', '海洋', '香水', '穿越时空的少女', '地球上的星星',
-                '我爱你', '哈利·波特与死亡圣器(上)', '弱点', '完美陌生人'}
+                '我爱你', '哈利·波特与死亡圣器(上)', '弱点', '完美陌生人']
+
+new_douban_top250_list = server.common.get_cache('top250', 'douban') or []
+new_imdb_top250_list = server.common.get_cache('top250', 'imdb') or []
+
+if new_imdb_top250_list and set(IMDBTop250) != set(new_imdb_top250_list):
+    IMDBTop250 = new_imdb_top250_list
+    _LOGGER.info(f"{plugins_name} IMDB TOP250 数据有更新")
+
+if new_douban_top250_list and set(DouBanTop250) != set(new_douban_top250_list):
+    DouBanTop250 = new_douban_top250_list
+    _LOGGER.info(f"{plugins_name} 豆瓣 TOP250 数据有更新")
+
 tags = {
     "Action": "动作",
     "Adventure": "冒险",
@@ -163,7 +177,7 @@ class plexsortout:
             account.setWebhooks(webhooks)
             _LOGGER.info(f"{plugins_name} 已向 PLEX 服务器添加 Webhook")
         else:
-            _LOGGER.info(f"{plugins_name} PLEX 服务器 Webhook 列表中已存在此 Webhook 链接")
+            _LOGGER.info(f"{plugins_name} PLEX 服务器 Webhook 列表中已添加此 Webhook 链接")
             
     def uniqify(self, seq):
         keys = {}
@@ -234,34 +248,22 @@ class plexsortout:
 
     # 解锁海报和背景
     def process_unlock_poster_and_art(self,video):
-        locked_info = []
-        locked_info = video.fields
-        if locked_info:
-            _LOGGER.info(f'「{video.title}」元数据锁定情况：{locked_info}')
-        else:
-            _LOGGER.info(f'「{video.title}」没有锁定任何元数据')
         video.unlockArt()
         video.unlockPoster()
         _LOGGER.info(f'「{video.title}」海报和背景已经解锁，PLEX 服务器可以自动更新了\n')
     # 锁定海报和背景
     def process_lock_poster_and_art(self,video):
-        locked_info = []
-        locked_info = video.fields
-        if locked_info:
-            _LOGGER.info(f'「{video.title}」元数据锁定情况：{locked_info}')
-        else:
-            _LOGGER.info(f'「{video.title}」没有锁定任何元数据')
         video.lockArt()
         video.lockPoster()
         _LOGGER.info(f'「{video.title}」海报和背景已经锁定，PLEX 服务器不会再自动更新了\n')
     # 筛选fanart封面
-    def process_fanart(self,video):
-        locked_info = []
-        locked_info = video.fields
-        if locked_info:
-            _LOGGER.info(f'「{video.title}」元数据锁定情况：{locked_info}')
-        else:
-            _LOGGER.info(f'「{video.title}」没有锁定任何元数据')
+    def process_fanart(self,video,locked_info):
+        # locked_info = []
+        # locked_info = video.fields
+        # if locked_info:
+        #     _LOGGER.info(f'「{video.title}」元数据锁定情况：{locked_info}')
+        # else:
+        #     _LOGGER.info(f'「{video.title}」没有锁定任何元数据')
         # if 'art' in [field.name for field in video.fields] and 'thumb' in [field.name for field in movie.fields]:
         if {'art', 'thumb'}.issubset(field.name for field in locked_info):
             _LOGGER.info(f'「{video.title}」当前海报和背景已经锁定，不做修改！')
@@ -328,19 +330,22 @@ class plexsortout:
         
 
     # 排序修改为首字母
-    def process_sorttitle(self,video):
+    def process_sorttitle(self,video,locked_info):
         title = video.title
-        # video.editTags(tag="actor", items=[x.tag for x in video.actors], remove=True)
-        if video.titleSort:  # 判断是否已经有标题
-            con = video.titleSort
-            if (self.check_contain_chinese(con) or RECOVER):
-                SortTitle = self.chinese2pinyin(title)
-                SortTitle = self.removePunctuation(SortTitle)
-                try:
-                    video.editSortTitle(SortTitle)
-                    _LOGGER.info(f"「{title}」排序已修改为首字母 ['{SortTitle}']\n")
-                except Exception as e:
-                    _LOGGER.error(f"「{title}」Edit SortTitle error,原因：{e}")
+        if 'titleSort' not in [field.name for field in locked_info]:
+            # video.editTags(tag="actor", items=[x.tag for x in video.actors], remove=True)
+            if video.titleSort:  # 判断是否已经有标题
+                con = video.titleSort
+                if (self.check_contain_chinese(con) or RECOVER):
+                    SortTitle = self.chinese2pinyin(title)
+                    SortTitle = self.removePunctuation(SortTitle)
+                    try:
+                        video.editSortTitle(SortTitle)
+                        _LOGGER.info(f"「{title}」排序已修改为首字母 ['{SortTitle}']\n")
+                    except Exception as e:
+                        _LOGGER.error(f"「{title}」首字母排序失败,原因：{e}\n")
+        else:
+            _LOGGER.info(f"「{title}」排序首字母为 ['{video.titleSort}']已锁定，不需要重新排序\n")
 
     def add_top250(self,video):
         title = video.title
@@ -350,6 +355,7 @@ class plexsortout:
                 for tag in video.genres:
                     if tag.tag == "IMDB TOP 250":
                         hastag = True
+                        break
                 if hastag:
                     _LOGGER.info(f"「{title}」已有 ['IMDB TOP 250'] 标签，不用再添加")
                     break
@@ -364,6 +370,7 @@ class plexsortout:
                 for tag in video.genres:
                     if tag.tag == "豆瓣TOP 250":
                         hastag = True
+                        break
                 if hastag:
                     _LOGGER.info(f"「{title}」已有 ['豆瓣TOP 250'] 标签，不用再添加")
                     break
@@ -481,8 +488,16 @@ class plexsortout:
             #处理合集
             if self.config_Collection:
                 collections=videos_lib.collections()
+                collections.sort(key=lambda collection: collection.addedAt, reverse=True)
                 for collection in collections:
                     _LOGGER.info(f"{plugins_name}开始处理合集 ['{collection.title}']")
+
+                    locked_info = []
+                    locked_info = collection.fields
+                    if locked_info:
+                        _LOGGER.info(f'「{collection.title}」元数据锁定情况：{locked_info}')
+                    else:
+                        _LOGGER.info(f'「{collection.title}」没有锁定任何元数据')
 
                     if is_lock == 'run_locked':
                         self.process_lock_poster_and_art(collection)
@@ -492,12 +507,28 @@ class plexsortout:
                         # _LOGGER.info(f"「{collection.title}」手动解锁海报和背景完成!\n")
                     else:
                         if self.config_Poster:
-                                self.process_fanart(collection)
+                                # self.process_fanart(collection)
+                                for i in range(5):
+                                    try:
+                                        self.process_fanart(collection,locked_info)
+                                        break
+                                    except Exception as e:
+                                        _LOGGER.error(f"{plugins_name} 处理 ['{collection.title}'] Fanart封面筛选异常，原因：{e}")
+                                        time.sleep(5)
+                                        continue
                         # 判断标题排序和标题是否相同,如果是不相同则视为手动修改过，不处理。
                         if collection.titleSort != collection.title and self.config_SortTitle:
                             _LOGGER.info(f"「{collection.title}」合集的标题排序为: ['{collection.titleSort}'], 已锁定或手动调整过，不进行翻译替换\n")
                         else:
-                            self.process_sorttitle(collection)
+                            # self.process_sorttitle(collection)
+                            for i in range(5):
+                                try:
+                                    self.process_sorttitle(collection)
+                                    break
+                                except Exception as e:
+                                    _LOGGER.error(f"{plugins_name} 处理 ['{collection.title}'] 首字母排序异常，原因：{e}")
+                                    time.sleep(5)
+                                    continue
 
             #处理视频
             video_len=len(videos)
@@ -513,6 +544,13 @@ class plexsortout:
                 video_num = video_len
             for video,i in zip(videos,range(video_num)):
                 _LOGGER.info(f"{plugins_name}开始处理 ['{video.title}']")
+                
+                locked_info = []
+                locked_info = video.fields
+                if locked_info:
+                    _LOGGER.info(f'「{video.title}」元数据锁定情况：{locked_info}')
+                else:
+                    _LOGGER.info(f'「{video.title}」没有锁定任何元数据')
 
                 if is_lock == 'run_locked':
                     self.process_lock_poster_and_art(video)
@@ -520,17 +558,42 @@ class plexsortout:
                 elif is_lock == 'run_unlocked':
                     self.process_unlock_poster_and_art(video)
                     # _LOGGER.info(f"「{video.title}」手动解锁海报和背景完成!\n")
-                else:
+                else:   
                     # _LOGGER.info(f"{plugins_name}video.type ['{video.type}']")
                     #fanart筛选
                     if self.config_Poster:
-                        self.process_fanart(video)
+                        # self.process_fanart(video)
+                        for i in range(5):
+                            try:
+                                self.process_fanart(video,locked_info)
+                                break
+                            except Exception as e:
+                                _LOGGER.error(f"{plugins_name} 处理 ['{video.title}'] Fanart封面筛选异常，原因：{e}")
+                                time.sleep(5)
+                                continue
+
                     #标签翻译整理
                     if self.config_Genres:
-                        self.process_tag(video)
+                        # self.process_tag(video)
+                        for i in range(5):
+                            try:
+                                self.process_tag(video)
+                                break
+                            except Exception as e:
+                                _LOGGER.error(f"{plugins_name} 处理 ['{video.title}'] 标签翻译异常，原因：{e}")
+                                time.sleep(5)
+                                continue
                     #首字母排序
                     if self.config_SortTitle:
-                        self.process_sorttitle(video)
+                        # self.process_sorttitle(video)
+                        for i in range(5):
+                            try:
+                                self.process_sorttitle(video,locked_info)
+                                break
+                            except Exception as e:
+                                _LOGGER.error(f"{plugins_name} 处理 ['{video.title}'] 首字母排序异常，原因：{e}")
+                                time.sleep(5)
+                                continue
             result = {
                 "run_locked": "手动锁定海报和背景完成!",
                 "run_unlocked": "手动解锁海报和背景完成!",
@@ -567,6 +630,7 @@ class plexsortout:
                 library = self.plexserver.library.section(library_name)
                 if library.type == 'photo': continue
                 collections = library.collections()
+                collections.sort(key=lambda collection: collection.addedAt, reverse=True)
                 # _LOGGER.error(f"{library_name}中的库0：{collections}")
                 # 库中最近添加媒体
                 library_recently_added_videos = library.recentlyAdded()[:sortout_num]
@@ -585,18 +649,42 @@ class plexsortout:
         # _LOGGER.error(f"{plugins_name}所有指定库最近 {sortout_num} 个合集，排序后：\n{recently_added_collections}")
         # _LOGGER.error(f"{plugins_name}所有指定库最近 {sortout_num} 项，排序后：\n{recently_added_videos}")
         
+
         for videoNum, collection in enumerate(recently_added_collections):
             if videoNum > sortout_num - 1:
                 break
             if self.config_Collection and collection:
                 _LOGGER.info(f"{plugins_name}开始处理合集 ['{collection.title}']")
+
+                locked_info = []
+                locked_info = collection.fields
+                if locked_info:
+                    _LOGGER.info(f'「{collection.title}」元数据锁定情况：{locked_info}')
+                else:
+                    _LOGGER.info(f'「{collection.title}」没有锁定任何元数据')
+
                 # 判断标题排序和标题是否相同,如果是不相同则视为手动修改过，不处理。
                 if self.config_Poster:
-                    self.process_fanart(collection)
+                    for i in range(5):
+                        try:
+                            self.process_fanart(collection)
+                            break
+                        except Exception as e:
+                            _LOGGER.error(f"{plugins_name} 处理 ['{collection.title}'] Fanart封面筛选异常，原因：{e}")
+                            time.sleep(5)
+                            continue
+
                 if collection.titleSort != collection.title and self.config_SortTitle:
                     _LOGGER.info(f"「{collection.title}」合集的标题排序为: ['{collection.titleSort}'], 已锁定或手动调整过，不进行翻译替换\n")
                 else:
-                    self.process_sorttitle(collection)
+                    for i in range(5):
+                        try:
+                            self.process_sorttitle(collection)
+                            break
+                        except Exception as e:
+                            _LOGGER.error(f"{plugins_name} 处理 ['{collection.title}'] 首字母排序异常，原因：{e}")
+                            time.sleep(5)
+                            continue
 
 
         # 整理最近添加的媒体
@@ -605,26 +693,58 @@ class plexsortout:
                 break
             if video:
                 _LOGGER.info(f"{plugins_name}开始处理 ['{video.title}']")
+
+                locked_info = []
+                locked_info = video.fields
+                if locked_info:
+                    _LOGGER.info(f'「{video.title}」元数据锁定情况：{locked_info}')
+                else:
+                    _LOGGER.info(f'「{video.title}」没有锁定任何元数据')
+
                 if video.type == "season":
                     parentkey = video.parentRatingKey
                     tvshows = self.plexserver.library.search(id=parentkey)
                     # plex.library.
-                    print(tvshows[0].title)
+                    # print(tvshows[0].title)
                     #标签翻译整理
                     editvideo=tvshows[0]
                 else:
-                    print(video.title)
+                    # print(video.title)
                     editvideo=video
 
                 # Fanart 精美封面筛选
                 if self.config_Poster:
-                    self.process_fanart(editvideo)
+                    # self.process_fanart(editvideo)
+                    for i in range(5):
+                        try:
+                            self.process_fanart(editvideo)
+                            break
+                        except Exception as e:
+                            _LOGGER.error(f"{plugins_name} 处理 ['{video.title}'] Fanart 封面筛选异常，原因：{e}")
+                            time.sleep(5)
+                            continue
                 # 标签翻译整理
                 if self.config_Genres:
-                    self.process_tag(editvideo)
+                    # self.process_tag(editvideo)
+                    for i in range(5):
+                        try:
+                            self.process_tag(editvideo)
+                            break
+                        except Exception as e:
+                            _LOGGER.error(f"{plugins_name} 处理 ['{video.title}'] 标签翻译异常，原因：{e}")
+                            time.sleep(5)
+                            continue
                 # 首字母排序
                 if self.config_SortTitle:
-                    self.process_sorttitle(editvideo)
+                    # self.process_sorttitle(editvideo)
+                    for i in range(5):
+                        try:
+                            self.process_sorttitle(editvideo)
+                            break
+                        except Exception as e:
+                            _LOGGER.error(f"{plugins_name} 处理 ['{video.title}'] 首字母排序异常，原因：{e}")
+                            time.sleep(5)
+                            continue
             else:
                 print(f"{videoNum+1}. (no item found)")
 
