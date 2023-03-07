@@ -78,7 +78,6 @@ def get_tmdb_id(imdb_id, api_key):
 # 通过 TMDb ID 获取电影中文名
 def get_chinese_name(imdb_id):
     api_key = tmdb_api_key
-    # api_key = '87581c88a18226eb341aaa686fa086e6'
     tmdb_id = get_tmdb_id(imdb_id, api_key)
     title_url = f'https://api.themoviedb.org/3/movie/{tmdb_id}?api_key={api_key}&language=zh-CN'
     title_response = session.request("GET", title_url, headers=headers, timeout=30)
