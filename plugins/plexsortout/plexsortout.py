@@ -177,7 +177,7 @@ class plexsortout:
             account.setWebhooks(webhooks)
             _LOGGER.info(f"{plugins_name} 已向 PLEX 服务器添加 Webhook")
         else:
-            _LOGGER.info(f"{plugins_name} PLEX 服务器 Webhook 列表中已添加此 Webhook 链接")
+            _LOGGER.info(f"{plugins_name} PLEX 服务器 Webhook 列表中已添加此 Webhook 链接：{webhook_url}")
             
     def uniqify(self, seq):
         keys = {}
@@ -523,7 +523,7 @@ class plexsortout:
                             # self.process_sorttitle(collection)
                             for i in range(5):
                                 try:
-                                    self.process_sorttitle(collection)
+                                    self.process_sorttitle(collection,locked_info)
                                     break
                                 except Exception as e:
                                     _LOGGER.error(f"{plugins_name} 处理 ['{collection.title}'] 首字母排序异常，原因：{e}")
@@ -667,7 +667,7 @@ class plexsortout:
                 if self.config_Poster:
                     for i in range(5):
                         try:
-                            self.process_fanart(collection)
+                            self.process_fanart(collection,locked_info)
                             break
                         except Exception as e:
                             _LOGGER.error(f"{plugins_name} 处理 ['{collection.title}'] Fanart封面筛选异常，原因：{e}")
@@ -679,7 +679,7 @@ class plexsortout:
                 else:
                     for i in range(5):
                         try:
-                            self.process_sorttitle(collection)
+                            self.process_sorttitle(collection,locked_info)
                             break
                         except Exception as e:
                             _LOGGER.error(f"{plugins_name} 处理 ['{collection.title}'] 首字母排序异常，原因：{e}")
@@ -717,7 +717,7 @@ class plexsortout:
                     # self.process_fanart(editvideo)
                     for i in range(5):
                         try:
-                            self.process_fanart(editvideo)
+                            self.process_fanart(editvideo,locked_info)
                             break
                         except Exception as e:
                             _LOGGER.error(f"{plugins_name} 处理 ['{video.title}'] Fanart 封面筛选异常，原因：{e}")
@@ -739,7 +739,7 @@ class plexsortout:
                     # self.process_sorttitle(editvideo)
                     for i in range(5):
                         try:
-                            self.process_sorttitle(editvideo)
+                            self.process_sorttitle(editvideo,locked_info)
                             break
                         except Exception as e:
                             _LOGGER.error(f"{plugins_name} 处理 ['{video.title}'] 首字母排序异常，原因：{e}")
