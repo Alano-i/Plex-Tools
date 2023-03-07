@@ -56,13 +56,15 @@ def get_douban_top250():
                 # movies[start + i] = title  # movies = {1: '肖申克的救赎', 2: '霸王别姬', 3: '阿甘正传'}
         else:
             _LOGGER.error(f'{plugins_name}请求豆瓣 TOP250 失败：{response.text}')
-
-    if movies and old_douban_top250_list != movies:
-        server.common.set_cache('top250', 'douban', movies)
-        new_douban_top250_list = server.common.get_cache('top250', 'douban') or []
-        _LOGGER.info(f'{plugins_name}最新「豆瓣TOP250」列表已存入缓存，共 {len(movies)} 部电影，如下：\n{new_douban_top250_list}')
+    if movies:
+        if old_douban_top250_list != movies:
+            server.common.set_cache('top250', 'douban', movies)
+            new_douban_top250_list = server.common.get_cache('top250', 'douban') or []
+            _LOGGER.info(f'{plugins_name}最新「豆瓣TOP250」列表已存入缓存，共 {len(movies)} 部电影，如下：\n{new_douban_top250_list}')
+        else:
+            _LOGGER.info(f'{plugins_name}最新「豆瓣TOP250」列表与缓存相同，共 {len(movies)} 部电影，如下：\n{movies}')
     else:
-        _LOGGER.info(f'{plugins_name}最新「豆瓣TOP250」列表与缓存相同，共 {len(movies)} 部电影，如下：\n{movies}')
+        _LOGGER.error(f'{plugins_name}获取「豆瓣TOP250」列表失败')
 
 # 通过 IMDb ID 获取 TMDb ID
 def get_tmdb_id(imdb_id, api_key):
@@ -117,12 +119,15 @@ def get_imdb_top_250():
     else:
         _LOGGER.error(f'{plugins_name}获取 IMDB TOP250 电影的 TMDb ID 失败')
 
-    if imdb_top250_chinese_name and old_imdb_top250_list != imdb_top250_chinese_name:
-        server.common.set_cache('top250', 'imdb', imdb_top250_chinese_name)
-        new_imdb_top250_list = server.common.get_cache('top250', 'imdb') or []
-        _LOGGER.info(f'{plugins_name}最新「IMDB TOP250」列表已存入缓存，共 {len(imdb_top250_chinese_name)} 部电影，如下：\n{new_imdb_top250_list}')
+    if imdb_top250_chinese_name:
+        if old_imdb_top250_list != imdb_top250_chinese_name:
+            server.common.set_cache('top250', 'imdb', imdb_top250_chinese_name)
+            new_imdb_top250_list = server.common.get_cache('top250', 'imdb') or []
+            _LOGGER.info(f'{plugins_name}最新「IMDB TOP250」列表已存入缓存，共 {len(imdb_top250_chinese_name)} 部电影，如下：\n{new_imdb_top250_list}')
+        else:
+            _LOGGER.info(f'{plugins_name}最新「IMDB TOP250」列表与缓存相同，共 {len(imdb_top250_chinese_name)} 部电影，如下：\n{imdb_top250_chinese_name}')
     else:
-        _LOGGER.info(f'{plugins_name}最新「IMDB TOP250」列表与缓存相同，共 {len(imdb_top250_chinese_name)} 部电影，如下：\n{imdb_top250_chinese_name}')
+        _LOGGER.error(f'{plugins_name}获取「IMDB TOP250」列表失败')
 
 def get_top250():
     get_douban_top250()
