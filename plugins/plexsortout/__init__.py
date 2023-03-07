@@ -1,6 +1,7 @@
 from mbot.openapi import mbot_api
 from mbot.openapi import media_server_manager
 
+
 # 导入插件类
 from .plexsortout import plexsortout
 plexst = plexsortout()
@@ -17,6 +18,7 @@ plexst.setdata(plexserver,mrserver,servertype)
 
 from .event import *
 from .command import *
+from .get_top250 import *
 
 import logging
 _LOGGER = logging.getLogger(__name__)
