@@ -159,9 +159,8 @@ class plexsortout:
         self.config_mbot_url = self.config.get('mbot_url')
         webhook_url = f'{self.config_mbot_url}/api/plugins/get_plex_event/webhook'
         # 开启webhooks开关
-        webhooks_enabled = self.plexserver.settings.get('webHooksEnabled').set(True)
-        push_notifications_enabled = self.plexserver.settings.get('pushNotificationsEnabled').set(True)
-        # webhooks_enabled.set(True)
+        self.plexserver.settings.get('webHooksEnabled').set(True)
+        self.plexserver.settings.get('pushNotificationsEnabled').set(True)
         self.plexserver.settings.save()
         # if not webhooks_enabled.value:
         #     # _LOGGER.info(f"{plugins_name}PLEX 的 webhook 开关未打开，将自动打开！")
