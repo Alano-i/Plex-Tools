@@ -111,6 +111,7 @@ tags = {
     "History": "历史",
     "Horror": "恐怖",
     "Music": "音乐",
+    "Adult": "成人",
     "Mystery": "悬疑",
     "Romance": "爱情",
     "Science Fiction": "科幻",
