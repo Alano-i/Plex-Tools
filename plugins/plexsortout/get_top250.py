@@ -70,12 +70,13 @@ def get_douban_top250():
 def get_tmdb_id(imdb_id, api_key):
     find_url = f'https://api.themoviedb.org/3/find/{imdb_id}?api_key={api_key}&external_source=imdb_id'
     find_response = session.request("GET", find_url, headers=headers, timeout=30)
+    tmdb_id = ''
     if find_response.status_code == 200:
         find_data = find_response.json()
         tmdb_id = find_data['movie_results'][0]['id']
-        return tmdb_id
     else:
         _LOGGER.error(f'{plugins_name}通过 IMDb ID 获取 TMDb ID 失败')
+    return tmdb_id
 
 # 通过 TMDb ID 获取电影中文名
 def get_chinese_name(imdb_id):
