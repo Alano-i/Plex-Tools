@@ -492,9 +492,16 @@ class plexsortout:
             if self.config_Collection:
                 collections=videos_lib.collections()
                 collections.sort(key=lambda collection: collection.addedAt, reverse=True)
+                collections_num = len(collections)
+                _LOGGER.info(f"{plugins_name}开始处理整理库中所有合集，共 {collections_num} 个合集")
+                collection_count = 1
                 for collection in collections:
-                    _LOGGER.info(f"{plugins_name}开始处理合集 ['{collection.title}']")
-
+                    collection_percent = f"{int((collection_count/collections_num)*100)}%"
+                    if collection_percent == '100%':
+                        _LOGGER.info(f"{plugins_name}开始处理第 {collection_count} 个合集：['{collection.title}']，已完成 {collection_percent}，这是当前库需要处理的最后一个合集")
+                    else:
+                        _LOGGER.info(f"{plugins_name}开始处理第 {collection_count} 个合集：['{collection.title}']，已完成 {collection_percent}，当前库还剩 {collections_num - collection_count} 个合集需要处理")
+                    collection_count = collection_count + 1
                     locked_info = []
                     locked_info = collection.fields
                     if locked_info:
@@ -546,7 +553,11 @@ class plexsortout:
                 _LOGGER.info(f"「{libtable[i]}」库设置整理数量为['{sortoutNum}'], 将整理库中所有影片，共 {video_len} 部影片")
                 video_num = video_len
             for video,i in zip(videos,range(video_num)):
-                _LOGGER.info(f"{plugins_name}开始处理 ['{video.title}']")
+                video_percent = f"{int(((i+1)/video_num)*100)}%"
+                if video_percent == '100%':
+                    _LOGGER.info(f"{plugins_name}开始处理第 {i+1} 部影片：['{video.title}']，已完成 {video_percent}，这是当前库需要处理的最后一部影片")
+                else:
+                    _LOGGER.info(f"{plugins_name}开始处理第 {i+1} 部影片：['{video.title}']，已完成 {int(((i+1)/video_num)*100)}%，当前库还剩 {video_num - i - 1} 部影片需要处理")
                 
                 locked_info = []
                 locked_info = video.fields
