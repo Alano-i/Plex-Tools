@@ -472,6 +472,22 @@ class plexsortout:
                 # video.reload()
                 genres = video.genres
                 self.updategenre(video, genres)
+    
+    def how_long(self, num):
+        total_seconds = num * 3.9
+        # 计算分钟数和秒数
+        minutes, seconds = divmod(total_seconds, 60)
+        if minutes == 0:
+            # 小于 1 分钟
+            how_long = f"{int(seconds)} 秒"
+        elif minutes < 60:
+            # 1 分钟到 1 小时之间
+            how_long = f"{int(minutes)} 分钟"
+        else:
+            # 大于等于 1 小时
+            hours, remaining_minutes = divmod(minutes, 60)
+            how_long = f"{int(hours)} 小时 {int(remaining_minutes)} 分钟"
+        return how_long
         
     # 手动选择媒体库整理
     def process_all(self,library,sortoutNum,is_lock):
@@ -500,7 +516,8 @@ class plexsortout:
                     if collection_percent == '100%':
                         _LOGGER.info(f"{plugins_name}开始处理第 {collection_count} 个合集：['{collection.title}']，已完成 {collection_percent}，这是当前库需要处理的最后一个合集")
                     else:
-                        _LOGGER.info(f"{plugins_name}开始处理第 {collection_count} 个合集：['{collection.title}']，已完成 {collection_percent}，当前库还剩 {collections_num - collection_count} 个合集需要处理")
+                        now_collection_count = int(collections_num - collection_count)
+                        _LOGGER.info(f"{plugins_name}开始处理第 {collection_count} 个合集：['{collection.title}']，已完成 {collection_percent}，当前库还剩 {now_collection_count} 个合集需要处理，还需要 {self.how_long(now_collection_count)}")
                     collection_count = collection_count + 1
                     locked_info = []
                     locked_info = collection.fields
@@ -557,7 +574,8 @@ class plexsortout:
                 if video_percent == '100%':
                     _LOGGER.info(f"{plugins_name}开始处理第 {i+1} 部影片：['{video.title}']，已完成 {video_percent}，这是当前库需要处理的最后一部影片")
                 else:
-                    _LOGGER.info(f"{plugins_name}开始处理第 {i+1} 部影片：['{video.title}']，已完成 {int(((i+1)/video_num)*100)}%，当前库还剩 {video_num - i - 1} 部影片需要处理")
+                    now_video_count = int(video_num - i - 1)
+                    _LOGGER.info(f"{plugins_name}开始处理第 {i+1} 部影片：['{video.title}']，已完成 {int(((i+1)/video_num)*100)}%，当前库还剩 {now_video_count} 部影片需要处理，还需要 {self.how_long(now_video_count)}")
                 
                 locked_info = []
                 locked_info = video.fields
