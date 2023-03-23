@@ -9,7 +9,7 @@
     {
       "fieldName": "mbot_url",
       "fieldType": "String",
-      "label": "Mbot 与 PLEX 同一局域的IP或域名，示例：http://10.10.10.3:1329",
+      "label": "Mbot 的 IP 或域名，示例：http://10.10.10.3:1329",
       "helperText": "用于接收 PLEX 发送的入库事件",
       "defaultValue": "http://10.10.10.3:1329"
     },
