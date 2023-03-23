@@ -263,9 +263,9 @@ class plexsortout:
         # locked_info = []
         # locked_info = video.fields
         # if locked_info:
-        #     _LOGGER.info(f'「{video.title}」元数据锁定情况：{locked_info}')
+        #     _LOGGER.info(f'「{video.title}」当前元数据锁定情况：{locked_info}')
         # else:
-        #     _LOGGER.info(f'「{video.title}」没有锁定任何元数据')
+        #     _LOGGER.info(f'「{video.title}」当前没有锁定任何元数据')
         # if 'art' in [field.name for field in video.fields] and 'thumb' in [field.name for field in movie.fields]:
         if {'art', 'thumb'}.issubset(field.name for field in locked_info):
             _LOGGER.info(f'「{video.title}」当前海报和背景已经锁定，不做修改！')
@@ -498,9 +498,9 @@ class plexsortout:
                     locked_info = []
                     locked_info = collection.fields
                     if locked_info:
-                        _LOGGER.info(f'「{collection.title}」元数据锁定情况：{locked_info}')
+                        _LOGGER.info(f'「{collection.title}」当前元数据锁定情况：{locked_info}')
                     else:
-                        _LOGGER.info(f'「{collection.title}」没有锁定任何元数据')
+                        _LOGGER.info(f'「{collection.title}」当前没有锁定任何元数据')
 
                     if is_lock == 'run_locked':
                         self.process_lock_poster_and_art(collection)
@@ -551,9 +551,9 @@ class plexsortout:
                 locked_info = []
                 locked_info = video.fields
                 if locked_info:
-                    _LOGGER.info(f'「{video.title}」元数据锁定情况：{locked_info}')
+                    _LOGGER.info(f'「{video.title}」当前元数据锁定情况：{locked_info}')
                 else:
-                    _LOGGER.info(f'「{video.title}」没有锁定任何元数据')
+                    _LOGGER.info(f'「{video.title}」当前没有锁定任何元数据')
 
                 if is_lock == 'run_locked':
                     self.process_lock_poster_and_art(video)
@@ -662,9 +662,9 @@ class plexsortout:
                 locked_info = []
                 locked_info = collection.fields
                 if locked_info:
-                    _LOGGER.info(f'「{collection.title}」元数据锁定情况：{locked_info}')
+                    _LOGGER.info(f'「{collection.title}」当前元数据锁定情况：{locked_info}')
                 else:
-                    _LOGGER.info(f'「{collection.title}」没有锁定任何元数据')
+                    _LOGGER.info(f'「{collection.title}」当前没有锁定任何元数据')
 
                 # 判断标题排序和标题是否相同,如果是不相同则视为手动修改过，不处理。
                 if self.config_Poster:
@@ -700,9 +700,9 @@ class plexsortout:
                 locked_info = []
                 locked_info = video.fields
                 if locked_info:
-                    _LOGGER.info(f'「{video.title}」元数据锁定情况：{locked_info}')
+                    _LOGGER.info(f'「{video.title}」当前元数据锁定情况：{locked_info}')
                 else:
-                    _LOGGER.info(f'「{video.title}」没有锁定任何元数据')
+                    _LOGGER.info(f'「{video.title}」当前没有锁定任何元数据')
 
                 if video.type == "season":
                     parentkey = video.parentRatingKey
