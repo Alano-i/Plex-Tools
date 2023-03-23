@@ -158,6 +158,7 @@ class plexsortout:
         self.config_SelfGenres = self.config.get('SelfGenres')
         self.config_LIBRARY = self.config.get('LIBRARY')
         self.config_mbot_url = self.config.get('mbot_url')
+        self.config_max_retry = int(self.config.get('max_retry'))
         webhook_url = f'{self.config_mbot_url}/api/plugins/get_plex_event/webhook'
         # 开启webhooks开关
         self.plexserver.settings.get('webHooksEnabled').set(True)
@@ -474,6 +475,7 @@ class plexsortout:
         
     # 手动选择媒体库整理
     def process_all(self,library,sortoutNum,is_lock):
+        # _LOGGER.error(f"{plugins_name}重试次数： {self.config_max_retry}")
         libtable=library
         for i in range(len(libtable)):
             _LOGGER.info(f"{plugins_name}现在开始处理媒体库 ['{libtable[i]}']")
@@ -509,7 +511,7 @@ class plexsortout:
                     else:
                         if self.config_Poster:
                                 # self.process_fanart(collection)
-                                for i in range(5):
+                                for i in range(self.config_max_retry):
                                     try:
                                         self.process_fanart(collection,locked_info)
                                         break
@@ -522,7 +524,7 @@ class plexsortout:
                             _LOGGER.info(f"「{collection.title}」合集的标题排序为: ['{collection.titleSort}'], 已锁定或手动调整过，不进行翻译替换\n")
                         else:
                             # self.process_sorttitle(collection)
-                            for i in range(5):
+                            for i in range(self.config_max_retry):
                                 try:
                                     self.process_sorttitle(collection,locked_info)
                                     break
@@ -564,7 +566,7 @@ class plexsortout:
                     #fanart筛选
                     if self.config_Poster:
                         # self.process_fanart(video)
-                        for i in range(5):
+                        for i in range(self.config_max_retry):
                             try:
                                 self.process_fanart(video,locked_info)
                                 break
@@ -576,7 +578,7 @@ class plexsortout:
                     #标签翻译整理
                     if self.config_Genres:
                         # self.process_tag(video)
-                        for i in range(5):
+                        for i in range(self.config_max_retry):
                             try:
                                 self.process_tag(video)
                                 break
@@ -587,7 +589,7 @@ class plexsortout:
                     #首字母排序
                     if self.config_SortTitle:
                         # self.process_sorttitle(video)
-                        for i in range(5):
+                        for i in range(self.config_max_retry):
                             try:
                                 self.process_sorttitle(video,locked_info)
                                 break
@@ -666,7 +668,7 @@ class plexsortout:
 
                 # 判断标题排序和标题是否相同,如果是不相同则视为手动修改过，不处理。
                 if self.config_Poster:
-                    for i in range(5):
+                    for i in range(self.config_max_retry):
                         try:
                             self.process_fanart(collection,locked_info)
                             break
@@ -678,7 +680,7 @@ class plexsortout:
                 if collection.titleSort != collection.title and self.config_SortTitle:
                     _LOGGER.info(f"「{collection.title}」合集的标题排序为: ['{collection.titleSort}'], 已锁定或手动调整过，不进行翻译替换\n")
                 else:
-                    for i in range(5):
+                    for i in range(self.config_max_retry):
                         try:
                             self.process_sorttitle(collection,locked_info)
                             break
@@ -716,7 +718,7 @@ class plexsortout:
                 # Fanart 精美封面筛选
                 if self.config_Poster:
                     # self.process_fanart(editvideo)
-                    for i in range(5):
+                    for i in range(self.config_max_retry):
                         try:
                             self.process_fanart(editvideo,locked_info)
                             break
@@ -727,7 +729,7 @@ class plexsortout:
                 # 标签翻译整理
                 if self.config_Genres:
                     # self.process_tag(editvideo)
-                    for i in range(5):
+                    for i in range(self.config_max_retry):
                         try:
                             self.process_tag(editvideo)
                             break
@@ -738,7 +740,7 @@ class plexsortout:
                 # 首字母排序
                 if self.config_SortTitle:
                     # self.process_sorttitle(editvideo)
-                    for i in range(5):
+                    for i in range(self.config_max_retry):
                         try:
                             self.process_sorttitle(editvideo,locked_info)
                             break
