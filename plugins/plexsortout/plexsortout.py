@@ -474,7 +474,7 @@ class plexsortout:
                 self.updategenre(video, genres)
     
     def how_long(self, num):
-        total_seconds = num * 3.9
+        total_seconds = num * 3.6
         # 计算分钟数和秒数
         minutes, seconds = divmod(total_seconds, 60)
         if minutes == 0:
@@ -602,6 +602,7 @@ class plexsortout:
                             except Exception as e:
                                 _LOGGER.error(f"{plugins_name} 处理 ['{video.title}'] Fanart封面筛选异常，原因：{e}")
                                 time.sleep(5)
+                                video.reload()
                                 continue
 
                     #标签翻译整理
@@ -614,6 +615,7 @@ class plexsortout:
                             except Exception as e:
                                 _LOGGER.error(f"{plugins_name} 处理 ['{video.title}'] 标签翻译异常，原因：{e}")
                                 time.sleep(5)
+                                video.reload()
                                 continue
                     #首字母排序
                     if self.config_SortTitle:
@@ -625,6 +627,7 @@ class plexsortout:
                             except Exception as e:
                                 _LOGGER.error(f"{plugins_name} 处理 ['{video.title}'] 首字母排序异常，原因：{e}")
                                 time.sleep(5)
+                                video.reload()
                                 continue
             result = {
                 "run_locked": "手动锁定海报和背景完成!",
@@ -681,7 +684,6 @@ class plexsortout:
         # _LOGGER.error(f"{plugins_name}所有指定库最近 {sortout_num} 个合集，排序后：\n{recently_added_collections}")
         # _LOGGER.error(f"{plugins_name}所有指定库最近 {sortout_num} 项，排序后：\n{recently_added_videos}")
         
-
         for videoNum, collection in enumerate(recently_added_collections):
             if videoNum > sortout_num - 1:
                 break
@@ -754,6 +756,7 @@ class plexsortout:
                         except Exception as e:
                             _LOGGER.error(f"{plugins_name} 处理 ['{video.title}'] Fanart 封面筛选异常，原因：{e}")
                             time.sleep(5)
+                            editvideo.reload()
                             continue
                 # 标签翻译整理
                 if self.config_Genres:
@@ -765,6 +768,7 @@ class plexsortout:
                         except Exception as e:
                             _LOGGER.error(f"{plugins_name} 处理 ['{video.title}'] 标签翻译异常，原因：{e}")
                             time.sleep(5)
+                            editvideo.reload()
                             continue
                 # 首字母排序
                 if self.config_SortTitle:
@@ -776,6 +780,7 @@ class plexsortout:
                         except Exception as e:
                             _LOGGER.error(f"{plugins_name} 处理 ['{video.title}'] 首字母排序异常，原因：{e}")
                             time.sleep(5)
+                            editvideo.reload()
                             continue
             else:
                 print(f"{videoNum+1}. (no item found)")
