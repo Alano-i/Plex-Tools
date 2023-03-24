@@ -33,16 +33,17 @@ is_lock_list = [
         "value": "run_unlocked"
     }
 ]
-    
+
 @plugin.command(name='select_data', title='整理 PLEX 媒体库', desc='自动翻译标签 & 拼音排序 & 添加TOP250标签 & 筛选Fanart封面', icon='HourglassFull',run_in_background=True)
 def select_data(ctx: PluginCommandContext,
                 library: ArgSchema(ArgType.Enum, '选择需要整理的媒体库', '', enum_values=get_enum_data,multi_value=True),
+                threading_video_num: ArgSchema(ArgType.String, '多线程处理：每组媒体数量，默认为0，单线程处理', '示例：200个媒体，设置20，则会启10个线程同时处理。建议少于100个线程', default_value='0', required=False),
                 sortoutNum: ArgSchema(ArgType.String, '整理数量，示例：50，表示只整理最新的50条，留空整理全部', '', default_value='ALL', required=False),
                 is_lock: ArgSchema(ArgType.Enum, '选择需要执行的操作，留空执行设置中选中的全部操作', '', enum_values=lambda: is_lock_list, default_value='run_all', multi_value=False, required=False)):
-
     # plexst.config['library']=library
     # plexst.process()
-    plexst.process_all(library,sortoutNum,is_lock)
+    threading_video_num = int(threading_video_num)
+    plexst.process_all(library,sortoutNum,is_lock,threading_video_num)
     user_list = list(filter(lambda x: x.role == 1, mbot_api.user.list()))
     if user_list:
         for user in user_list:
