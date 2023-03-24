@@ -37,7 +37,7 @@ is_lock_list = [
 @plugin.command(name='select_data', title='整理 PLEX 媒体库', desc='自动翻译标签 & 拼音排序 & 添加TOP250标签 & 筛选Fanart封面', icon='HourglassFull',run_in_background=True)
 def select_data(ctx: PluginCommandContext,
                 library: ArgSchema(ArgType.Enum, '选择需要整理的媒体库', '', enum_values=get_enum_data,multi_value=True),
-                threading_num: ArgSchema(ArgType.String, '多线程处理：填线程数量。默认为0，单线程处理', '示例：200个媒体，设置20，则会启20个线程处理，每个线程处理10个。建议少于100个线程', default_value='0', required=False),
+                threading_num: ArgSchema(ArgType.String, '多线程处理：填线程数量。默认为0，单线程处理', '示例：2000个媒体，设置40，则会启40个线程处理，每个线程处理50个。建议少于100个线程', default_value='0', required=False),
                 sortoutNum: ArgSchema(ArgType.String, '整理数量，示例：50，表示只整理最新的50条，留空整理全部', '', default_value='ALL', required=False),
                 is_lock: ArgSchema(ArgType.Enum, '选择需要执行的操作，留空执行设置中选中的全部操作', '', enum_values=lambda: is_lock_list, default_value='run_all', multi_value=False, required=False)):
     # plexst.config['library']=library
