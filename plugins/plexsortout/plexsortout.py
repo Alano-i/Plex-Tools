@@ -110,6 +110,7 @@ tags = {
     "Documentary": "纪录",
     "Drama": "剧情",
     "Family": "家庭",
+    "Awards Show": "颁奖典礼",
     "Fantasy": "奇幻",
     "History": "历史",
     "Horror": "恐怖",
