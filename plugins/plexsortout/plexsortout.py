@@ -558,9 +558,9 @@ class plexsortout:
                             video.reload()
                             continue
         result = {
-            "run_locked": "手动锁定海报和背景完成!",
-            "run_unlocked": "手动解锁海报和背景完成!",
-            "run_all": "手动运行整理完成!"
+            "run_locked": f"{group_now} 分组手动锁定海报和背景完成!",
+            "run_unlocked": f"{group_now} 分组手动解锁海报和背景完成!",
+            "run_all": f"{group_now} 分组手动运行整理完成!"
         }
         _LOGGER.info(f"{plugins_name}{result[is_lock]}")
 
