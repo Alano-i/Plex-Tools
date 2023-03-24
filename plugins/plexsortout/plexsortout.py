@@ -495,15 +495,15 @@ class plexsortout:
         return how_long
 
 
-    def thread_process_all(self, videos,is_lock):
+    def thread_process_all(self, videos,is_lock,group_now):
         video_num = len(videos)
         for video,i in zip(videos,range(video_num)):
             video_percent = f"{round(((i+1)/video_num)*100, 1)}%"
             if video_percent == '100.0%':
-                _LOGGER.info(f"{plugins_name}开始处理第 {i+1} 部影片：['{video.title}']，已完成 100%，这是当前分组需要处理的最后一部影片")
+                _LOGGER.info(f"{plugins_name}开始处理 {group_now} 分组第 {i+1} 部影片：['{video.title}']，已完成 100%，这是当前分组需要处理的最后一部影片")
             else:
                 now_video_count = int(video_num - i - 1)
-                _LOGGER.info(f"{plugins_name}开始处理第 {i+1} 部影片：['{video.title}']，已完成 {video_percent}，当前分组剩余 {now_video_count} 部影片需要处理，还需要 {self.how_long(now_video_count)}")
+                _LOGGER.info(f"{plugins_name}开始处理 {group_now} 分组第 {i+1} 部影片：['{video.title}']，已完成 {video_percent}，当前分组剩余 {now_video_count} 部影片需要处理，还需要 {self.how_long(now_video_count)}")
             
             locked_info = []
             locked_info = video.fields
@@ -655,10 +655,11 @@ class plexsortout:
                 all_group_num = len(video_groups)
                 group_num = 1
                 for video_group in video_groups:
-                    _LOGGER.warning(f"{plugins_name}开始处理第 {group_num}/{all_group_num} 个分组")
+                    group_now = f"{group_num}/{all_group_num}"
+                    _LOGGER.warning(f"{plugins_name}开始处理第 {group_now} 个分组")
                     # _LOGGER.warning(f"{plugins_name}开始处理第 {group_num}/{all_group_num} 个分组:{video_group}")
                     group_num = group_num + 1
-                    thread = threading.Thread(target=self.thread_process_all, args=(video_group, is_lock))
+                    thread = threading.Thread(target=self.thread_process_all, args=(video_group, is_lock, group_now))
                     thread.start()
                     # time.sleep(random.randint(6, 10))
                     time.sleep(random.randint(7,9))
