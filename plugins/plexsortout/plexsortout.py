@@ -7,6 +7,9 @@ from mbot.openapi import mbot_api
 import pypinyin
 import re
 import time
+import threading
+import random
+
 
 server = mbot_api
 RECOVER = 1
@@ -139,6 +142,7 @@ tags = {
     "Film-Noir": "黑色",
     "Indie": "独立",
 }
+max_retry = 10
 
 class plexsortout:
     def setdata(self,plex,mrserver,servertype):
@@ -158,7 +162,8 @@ class plexsortout:
         self.config_SelfGenres = self.config.get('SelfGenres')
         self.config_LIBRARY = self.config.get('LIBRARY')
         self.config_mbot_url = self.config.get('mbot_url')
-        self.config_max_retry = int(self.config.get('max_retry'))
+        # self.config_max_retry = int(self.config.get('max_retry'))
+        
         webhook_url = f'{self.config_mbot_url}/api/plugins/get_plex_event/webhook'
         # 开启webhooks开关
         self.plexserver.settings.get('webHooksEnabled').set(True)
@@ -488,10 +493,82 @@ class plexsortout:
             hours, remaining_minutes = divmod(minutes, 60)
             how_long = f"{int(hours)} 小时 {int(remaining_minutes)} 分钟"
         return how_long
+
+
+    def thread_process_all(self, videos,is_lock):
+        video_num = len(videos)
+        for video,i in zip(videos,range(video_num)):
+            video_percent = f"{round(((i+1)/video_num)*100, 1)}%"
+            if video_percent == '100.0%':
+                _LOGGER.info(f"{plugins_name}开始处理第 {i+1} 部影片：['{video.title}']，已完成 100%，这是当前分组需要处理的最后一部影片")
+            else:
+                now_video_count = int(video_num - i - 1)
+                _LOGGER.info(f"{plugins_name}开始处理第 {i+1} 部影片：['{video.title}']，已完成 {video_percent}，当前分组剩余 {now_video_count} 部影片需要处理，还需要 {self.how_long(now_video_count)}")
+            
+            locked_info = []
+            locked_info = video.fields
+            if locked_info:
+                _LOGGER.info(f'「{video.title}」当前元数据锁定情况：{locked_info}')
+            else:
+                _LOGGER.info(f'「{video.title}」当前没有锁定任何元数据')
+
+            if is_lock == 'run_locked':
+                self.process_lock_poster_and_art(video)
+                # _LOGGER.info(f"「{video.title}」手动锁定海报和背景完成!\n")
+            elif is_lock == 'run_unlocked':
+                self.process_unlock_poster_and_art(video)
+                # _LOGGER.info(f"「{video.title}」手动解锁海报和背景完成!\n")
+            else:   
+                # _LOGGER.info(f"{plugins_name}video.type ['{video.type}']")
+                #fanart筛选
+                if self.config_Poster:
+                    # self.process_fanart(video)
+                    for i in range(max_retry):
+                        try:
+                            self.process_fanart(video,locked_info)
+                            break
+                        except Exception as e:
+                            _LOGGER.error(f"{plugins_name} 处理 ['{video.title}'] Fanart封面筛选异常，原因：{e}")
+                            time.sleep(5)
+                            video.reload()
+                            continue
+
+                #标签翻译整理
+                if self.config_Genres:
+                    # self.process_tag(video)
+                    for i in range(max_retry):
+                        try:
+                            self.process_tag(video)
+                            break
+                        except Exception as e:
+                            _LOGGER.error(f"{plugins_name} 处理 ['{video.title}'] 标签翻译异常，原因：{e}")
+                            time.sleep(5)
+                            video.reload()
+                            continue
+                #首字母排序
+                if self.config_SortTitle:
+                    # self.process_sorttitle(video)
+                    for i in range(max_retry):
+                        try:
+                            self.process_sorttitle(video,locked_info)
+                            break
+                        except Exception as e:
+                            _LOGGER.error(f"{plugins_name} 处理 ['{video.title}'] 首字母排序异常，原因：{e}")
+                            time.sleep(5)
+                            video.reload()
+                            continue
+        result = {
+            "run_locked": "手动锁定海报和背景完成!",
+            "run_unlocked": "手动解锁海报和背景完成!",
+            "run_all": "手动运行整理完成!"
+        }
+        _LOGGER.info(f"{plugins_name}{result[is_lock]}")
+
+
         
     # 手动选择媒体库整理
-    def process_all(self,library,sortoutNum,is_lock):
-        # _LOGGER.error(f"{plugins_name}重试次数： {self.config_max_retry}")
+    def process_all(self,library,sortoutNum,is_lock,threading_video_num):
+        # _LOGGER.error(f"{plugins_name}重试次数： {max_retry}")
         libtable=library
         for i in range(len(libtable)):
             _LOGGER.info(f"{plugins_name}现在开始处理媒体库 ['{libtable[i]}']")
@@ -535,7 +612,7 @@ class plexsortout:
                     else:
                         if self.config_Poster:
                                 # self.process_fanart(collection)
-                                for i in range(self.config_max_retry):
+                                for i in range(max_retry):
                                     try:
                                         self.process_fanart(collection,locked_info)
                                         break
@@ -548,7 +625,7 @@ class plexsortout:
                             _LOGGER.info(f"「{collection.title}」合集的标题排序为: ['{collection.titleSort}'], 已锁定或手动调整过，不进行翻译替换\n")
                         else:
                             # self.process_sorttitle(collection)
-                            for i in range(self.config_max_retry):
+                            for i in range(max_retry):
                                 try:
                                     self.process_sorttitle(collection,locked_info)
                                     break
@@ -569,72 +646,91 @@ class plexsortout:
             else:
                 _LOGGER.info(f"「{libtable[i]}」库设置整理数量为['{sortoutNum}'], 将整理库中所有影片，共 {video_len} 部影片")
                 video_num = video_len
-            for video,i in zip(videos,range(video_num)):
-                video_percent = f"{round(((i+1)/video_num)*100, 1)}%"
-                if video_percent == '100.0%':
-                    _LOGGER.info(f"{plugins_name}开始处理第 {i+1} 部影片：['{video.title}']，已完成 100%，这是当前库需要处理的最后一部影片")
-                else:
-                    now_video_count = int(video_num - i - 1)
-                    _LOGGER.info(f"{plugins_name}开始处理第 {i+1} 部影片：['{video.title}']，已完成 {video_percent}，当前库剩余 {now_video_count} 部影片需要处理，还需要 {self.how_long(now_video_count)}")
-                
-                locked_info = []
-                locked_info = video.fields
-                if locked_info:
-                    _LOGGER.info(f'「{video.title}」当前元数据锁定情况：{locked_info}')
-                else:
-                    _LOGGER.info(f'「{video.title}」当前没有锁定任何元数据')
 
-                if is_lock == 'run_locked':
-                    self.process_lock_poster_and_art(video)
-                    # _LOGGER.info(f"「{video.title}」手动锁定海报和背景完成!\n")
-                elif is_lock == 'run_unlocked':
-                    self.process_unlock_poster_and_art(video)
-                    # _LOGGER.info(f"「{video.title}」手动解锁海报和背景完成!\n")
-                else:   
-                    # _LOGGER.info(f"{plugins_name}video.type ['{video.type}']")
-                    #fanart筛选
-                    if self.config_Poster:
-                        # self.process_fanart(video)
-                        for i in range(self.config_max_retry):
-                            try:
-                                self.process_fanart(video,locked_info)
-                                break
-                            except Exception as e:
-                                _LOGGER.error(f"{plugins_name} 处理 ['{video.title}'] Fanart封面筛选异常，原因：{e}")
-                                time.sleep(5)
-                                video.reload()
-                                continue
+            if threading_video_num:
+                videos = videos[:video_num]
+                # 将视频名称序列分成100个一组的列表
+                video_groups = [videos[mnx:mnx+threading_video_num] for mnx in range(0, len(videos), threading_video_num)]
+                # 为每个分组启动一个新的线程，并将其作为参数传递给sss函数
+                all_group_num = len(video_groups)
+                group_num = 1
+                for video_group in video_groups:
+                    _LOGGER.warning(f"{plugins_name}开始处理第 {group_num}/{all_group_num} 个分组")
+                    # _LOGGER.warning(f"{plugins_name}开始处理第 {group_num}/{all_group_num} 个分组:{video_group}")
+                    group_num = group_num + 1
+                    thread = threading.Thread(target=self.thread_process_all, args=(video_group, is_lock))
+                    thread.start()
+                    # time.sleep(random.randint(6, 10))
+                    time.sleep(random.randint(7,9))
+                # self.thread_process_all(videos, video_num)
 
-                    #标签翻译整理
-                    if self.config_Genres:
-                        # self.process_tag(video)
-                        for i in range(self.config_max_retry):
-                            try:
-                                self.process_tag(video)
-                                break
-                            except Exception as e:
-                                _LOGGER.error(f"{plugins_name} 处理 ['{video.title}'] 标签翻译异常，原因：{e}")
-                                time.sleep(5)
-                                video.reload()
-                                continue
-                    #首字母排序
-                    if self.config_SortTitle:
-                        # self.process_sorttitle(video)
-                        for i in range(self.config_max_retry):
-                            try:
-                                self.process_sorttitle(video,locked_info)
-                                break
-                            except Exception as e:
-                                _LOGGER.error(f"{plugins_name} 处理 ['{video.title}'] 首字母排序异常，原因：{e}")
-                                time.sleep(5)
-                                video.reload()
-                                continue
-            result = {
-                "run_locked": "手动锁定海报和背景完成!",
-                "run_unlocked": "手动解锁海报和背景完成!",
-                "run_all": "手动运行整理完成!"
-            }
-            _LOGGER.info(f"{plugins_name}{result[is_lock]}")
+            else:
+                for video,i in zip(videos,range(video_num)):
+                    video_percent = f"{round(((i+1)/video_num)*100, 1)}%"
+                    if video_percent == '100.0%':
+                        _LOGGER.info(f"{plugins_name}开始处理第 {i+1} 部影片：['{video.title}']，已完成 100%，这是当前库需要处理的最后一部影片")
+                    else:
+                        now_video_count = int(video_num - i - 1)
+                        _LOGGER.info(f"{plugins_name}开始处理第 {i+1} 部影片：['{video.title}']，已完成 {video_percent}，当前库剩余 {now_video_count} 部影片需要处理，还需要 {self.how_long(now_video_count)}")
+                    
+                    locked_info = []
+                    locked_info = video.fields
+                    if locked_info:
+                        _LOGGER.info(f'「{video.title}」当前元数据锁定情况：{locked_info}')
+                    else:
+                        _LOGGER.info(f'「{video.title}」当前没有锁定任何元数据')
+
+                    if is_lock == 'run_locked':
+                        self.process_lock_poster_and_art(video)
+                        # _LOGGER.info(f"「{video.title}」手动锁定海报和背景完成!\n")
+                    elif is_lock == 'run_unlocked':
+                        self.process_unlock_poster_and_art(video)
+                        # _LOGGER.info(f"「{video.title}」手动解锁海报和背景完成!\n")
+                    else:   
+                        # _LOGGER.info(f"{plugins_name}video.type ['{video.type}']")
+                        #fanart筛选
+                        if self.config_Poster:
+                            # self.process_fanart(video)
+                            for i in range(max_retry):
+                                try:
+                                    self.process_fanart(video,locked_info)
+                                    break
+                                except Exception as e:
+                                    _LOGGER.error(f"{plugins_name} 处理 ['{video.title}'] Fanart封面筛选异常，原因：{e}")
+                                    time.sleep(5)
+                                    video.reload()
+                                    continue
+
+                        #标签翻译整理
+                        if self.config_Genres:
+                            # self.process_tag(video)
+                            for i in range(max_retry):
+                                try:
+                                    self.process_tag(video)
+                                    break
+                                except Exception as e:
+                                    _LOGGER.error(f"{plugins_name} 处理 ['{video.title}'] 标签翻译异常，原因：{e}")
+                                    time.sleep(5)
+                                    video.reload()
+                                    continue
+                        #首字母排序
+                        if self.config_SortTitle:
+                            # self.process_sorttitle(video)
+                            for i in range(max_retry):
+                                try:
+                                    self.process_sorttitle(video,locked_info)
+                                    break
+                                except Exception as e:
+                                    _LOGGER.error(f"{plugins_name} 处理 ['{video.title}'] 首字母排序异常，原因：{e}")
+                                    time.sleep(5)
+                                    video.reload()
+                                    continue
+                result = {
+                    "run_locked": "手动锁定海报和背景完成!",
+                    "run_unlocked": "手动解锁海报和背景完成!",
+                    "run_all": "手动运行整理完成!"
+                }
+                _LOGGER.info(f"{plugins_name}{result[is_lock]}")
         # else:
         #     _LOGGER.error(f'{plugins_name}仅支持配置了 PLEX 媒体库的用户使用')
 
@@ -699,7 +795,7 @@ class plexsortout:
 
                 # 判断标题排序和标题是否相同,如果是不相同则视为手动修改过，不处理。
                 if self.config_Poster:
-                    for i in range(self.config_max_retry):
+                    for i in range(max_retry):
                         try:
                             self.process_fanart(collection,locked_info)
                             break
@@ -711,7 +807,7 @@ class plexsortout:
                 if collection.titleSort != collection.title and self.config_SortTitle:
                     _LOGGER.info(f"「{collection.title}」合集的标题排序为: ['{collection.titleSort}'], 已锁定或手动调整过，不进行翻译替换\n")
                 else:
-                    for i in range(self.config_max_retry):
+                    for i in range(max_retry):
                         try:
                             self.process_sorttitle(collection,locked_info)
                             break
@@ -749,7 +845,7 @@ class plexsortout:
                 # Fanart 精美封面筛选
                 if self.config_Poster:
                     # self.process_fanart(editvideo)
-                    for i in range(self.config_max_retry):
+                    for i in range(max_retry):
                         try:
                             self.process_fanart(editvideo,locked_info)
                             break
@@ -761,7 +857,7 @@ class plexsortout:
                 # 标签翻译整理
                 if self.config_Genres:
                     # self.process_tag(editvideo)
-                    for i in range(self.config_max_retry):
+                    for i in range(max_retry):
                         try:
                             self.process_tag(editvideo)
                             break
@@ -773,7 +869,7 @@ class plexsortout:
                 # 首字母排序
                 if self.config_SortTitle:
                     # self.process_sorttitle(editvideo)
-                    for i in range(self.config_max_retry):
+                    for i in range(max_retry):
                         try:
                             self.process_sorttitle(editvideo,locked_info)
                             break
