@@ -563,11 +563,9 @@ class plexsortout:
             "run_all": f"{group_now} 分组手动运行整理完成!"
         }
         _LOGGER.info(f"{plugins_name}{result[is_lock]}")
-
-
         
     # 手动选择媒体库整理
-    def process_all(self,library,sortoutNum,is_lock,threading_video_num):
+    def process_all(self,library,sortoutNum,is_lock,threading_num):
         # _LOGGER.error(f"{plugins_name}重试次数： {max_retry}")
         libtable=library
         for i in range(len(libtable)):
@@ -647,13 +645,15 @@ class plexsortout:
                 _LOGGER.info(f"「{libtable[i]}」库设置整理数量为['{sortoutNum}'], 将整理库中所有影片，共 {video_len} 部影片")
                 video_num = video_len
 
-            if threading_video_num:
+            if threading_num:
                 videos = videos[:video_num]
+                threading_video_num = int(len(videos)/threading_num)
                 # 将视频名称序列分成100个一组的列表
                 video_groups = [videos[mnx:mnx+threading_video_num] for mnx in range(0, len(videos), threading_video_num)]
                 # 为每个分组启动一个新的线程，并将其作为参数传递给sss函数
                 all_group_num = len(video_groups)
                 group_num = 1
+                threads = []
                 for video_group in video_groups:
                     group_now = f"{group_num}/{all_group_num}"
                     _LOGGER.warning(f"{plugins_name}开始处理第 {group_now} 个分组")
@@ -661,10 +661,16 @@ class plexsortout:
                     group_num = group_num + 1
                     thread = threading.Thread(target=self.thread_process_all, args=(video_group, is_lock, group_now))
                     thread.start()
+                    threads.append(thread)
                     # time.sleep(random.randint(6, 10))
                     time.sleep(random.randint(7,9))
                 # self.thread_process_all(videos, video_num)
-
+                
+                # 等待所有线程执行完毕
+                for t in threads:
+                    t.join()
+                _LOGGER.info(f"{plugins_name}所有 {all_group_num} 个分组已全部处理完成")
+                
             else:
                 for video,i in zip(videos,range(video_num)):
                     video_percent = f"{round(((i+1)/video_num)*100, 1)}%"
