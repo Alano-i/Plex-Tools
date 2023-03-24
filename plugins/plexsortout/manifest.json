@@ -21,13 +21,6 @@
       "defaultValue": false
     },
     {
-      "fieldName": "max_retry",
-      "fieldType": "String",
-      "label": "PLEX API 连接超时重试次数",
-      "helperText": "",
-      "defaultValue": "10"
-    },
-    {
       "fieldName": "SortTitle",
       "fieldType": "Bool",
       "label": "整理首字母",
