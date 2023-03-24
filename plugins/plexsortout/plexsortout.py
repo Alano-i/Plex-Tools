@@ -405,8 +405,8 @@ class plexsortout:
             tags[tag.split(':')[0]]=tag.split(':')[1]
 
         title = video.title
-
-        if self.config_Top250:
+        # 只有电影类型才需要添加 TOP250 标签
+        if self.config_Top250 and video.TYPE == 'movie':
             self.add_top250(video)
 
         if video.genres:
