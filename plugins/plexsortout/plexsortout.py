@@ -1,15 +1,13 @@
 import logging
-
 import sys
 from moviebotapi.core.models import MediaType
-# from plexapi.server import PlexServer
 from mbot.openapi import mbot_api
 import pypinyin
 import re
 import time
 import threading
 import random
-
+# from plexapi.server import PlexServer
 
 server = mbot_api
 RECOVER = 1
@@ -697,27 +695,63 @@ class plexsortout:
                     "run_all": "手动运行整理完成!"
                 }
                 _LOGGER.info(f"{plugins_name}{result[is_lock]}")
-        # else:
-        #     _LOGGER.error(f'{plugins_name}仅支持配置了 PLEX 媒体库的用户使用')
 
     # 自动整理指定库最近新添加项
     def process_new(self, library_section_title, rating_key, parent_rating_key, grandparent_rating_key, grandparent_title, parent_title, org_title, org_type):
-        library_names = self.config_LIBRARY.split(',')
-        _LOGGER.info(f"{plugins_name}指定需要整理的媒体库为：{library_names}")
-        if library_section_title and library_section_title not in library_names:
-            _LOGGER.info(f"{plugins_name}新入库媒体所属库为：['{library_section_title}']，不属于需要整理的媒体库，跳过整理！")
-            return         
-        if org_type == 'movie':
-            _LOGGER.info(f"{plugins_name}等待 60 秒后，处理新入库媒体：['{org_title}']")
-        elif org_type == 'episode':
-            _LOGGER.info(f"{plugins_name}等待 60 秒后，处理新入库媒体：['{grandparent_title}']")
-        elif org_type == 'season':
-            _LOGGER.info(f"{plugins_name}等待 60 秒后，处理新入库媒体：['{parent_title}']")
+        sortout_num = 6
+        recently_added_collections = []
+        if self.config_Collection:
+            if org_type == 'movie':
+                _LOGGER.info(f"{plugins_name}随机等待 50-70 秒后，处理新入库媒体：['{org_title}'] 和 最近添加的 {sortout_num} 个合集")
+            elif org_type == 'episode':
+                _LOGGER.info(f"{plugins_name}随机等待 50-70 秒后，处理新入库媒体：['{grandparent_title}'] 和 最近添加的 {sortout_num} 个合集")
+            elif org_type == 'season':
+                _LOGGER.info(f"{plugins_name}随机等待 50-70 秒后，处理新入库媒体：['{parent_title}'] 和 最近添加的 {sortout_num} 个合集")
+            else:
+                _LOGGER.info(f"{plugins_name}随机等待 50-70 秒后，处理新入库媒体：['{org_title}'] 和 最近添加的 {sortout_num} 个合集")
         else:
-            _LOGGER.info(f"{plugins_name}等待 60 秒后，处理新入库媒体：['{org_title}']")
+            if org_type == 'movie':
+                _LOGGER.info(f"{plugins_name}随机等待 50-70 秒后，处理新入库媒体：['{org_title}']")
+            elif org_type == 'episode':
+                _LOGGER.info(f"{plugins_name}随机等待 50-70 秒后，处理新入库媒体：['{grandparent_title}']")
+            elif org_type == 'season':
+                _LOGGER.info(f"{plugins_name}随机等待 50-70 秒后，处理新入库媒体：['{parent_title}']")
+            else:
+                _LOGGER.info(f"{plugins_name}随机等待 50-70 秒后，处理新入库媒体：['{org_title}']")
 
         video = None
-        time.sleep(60)
+        time.sleep(random.randint(50, 70))
+
+        # 指定要获取最近添加项的库
+        if self.config_LIBRARY == 'ALL' or not self.config_LIBRARY:
+            if self.config_Collection:
+                for library in self.plexserver.library.sections():
+                    if library.type == 'photo': continue
+                    for collection in library.collections():
+                        recently_added_collections.append(collection)
+                _LOGGER.info(f"{plugins_name}未指定需要整理的媒体库或设置为ALL，将整理全库中的最近 {sortout_num} 个合集")
+        else:
+            library_names = self.config_LIBRARY.split(',')
+            _LOGGER.info(f"{plugins_name}指定需要整理的媒体库为：{library_names}")
+            if library_section_title and library_section_title not in library_names:
+                _LOGGER.info(f"{plugins_name}新入库媒体所属库为：['{library_section_title}']，不属于需要整理的媒体库，跳过整理！")
+                return
+            if self.config_Collection:
+                # _LOGGER.info(f"{plugins_name}将整理指定库中最近添加的 {sortout_num} 个合集")
+                # 获取所有指定库中最近添加的 sortout_num 项
+                for library_name in library_names:
+                    library = self.plexserver.library.section(library_name)
+                    if library.type == 'photo': continue
+                    collections = library.collections()
+                    collections.sort(key=lambda collection: collection.addedAt, reverse=True)
+                    # _LOGGER.error(f"{library_name}中的库0：{collections}")
+                    # 库中最近添加合集
+                    library_recently_added_collections = collections[:sortout_num]
+                    if len(library_recently_added_collections) > 0:
+                        recently_added_collections.extend(library_recently_added_collections)
+        # 按照添加时间排序
+        recently_added_collections.sort(key=lambda collection: collection.addedAt, reverse=True)
+
         for retry_count in range(max_retry):
             try:
                 # 通过入库事件传来的媒体唯一 ratingkey 来获取 video 对象，这个对象包含媒体的所有信息
@@ -729,16 +763,7 @@ class plexsortout:
         # 整理新入库媒体（由 plex webhook 主动传入）
         if video:
             video_title = ''
-            #library_names = self.config_LIBRARY.split(',')
-            #_LOGGER.info(f"{plugins_name}指定需要整理的媒体库为：{library_names}")
-            #if library_section_title and library_section_title not in library_names:
-                #_LOGGER.info(f"{plugins_name}新入库媒体所属库为：['{library_section_title}']，不属于需要整理的媒体库，跳过整理！")
-                #return  
-            video_title = video.title
-            
-            # _LOGGER.info(f"video.type:{video.type}")
-            # _LOGGER.info(f"video.parentRatingKey:{video.parentRatingKey}")
-            
+            video_title = video.title 
             if video.type == "episode":
                 editvideo = self.plexserver.fetchItem(int(grandparent_rating_key))
                 video_title = editvideo.title
@@ -749,14 +774,12 @@ class plexsortout:
                 editvideo=video
 
             locked_info = []
-
             locked_info = editvideo.fields
             if locked_info:
                 _LOGGER.info(f'「{video_title}」当前元数据锁定情况：{locked_info}')
             else:
                 _LOGGER.info(f'「{video_title}」当前没有锁定任何元数据')
 
-            # _LOGGER.info(f"{plugins_name}开始处理 ['{video_title}']")
             # Fanart 精美封面筛选
             if self.config_Poster:
                 for i in range(max_retry):
@@ -791,156 +814,40 @@ class plexsortout:
                         editvideo.reload()
                         continue
         else:
-            print(f"PLEX服务器中没有找到此媒体: {rating_key}")
+            _LOGGER.info(f"PLEX服务器中没有找到此媒体: {rating_key}")
 
-        _LOGGER.info(f"{plugins_name}新入库影片：['{video_title}'] 整理完成")
-    # # 自动整理指定库最近新添加项
-    # def process(self, library_section_title, rating_key):
-    #     sortout_num = 6
-    #     recently_added_videos = []
-    #     recently_added_collections = []
-    #     # 指定要获取最近添加项的库
-    #     if self.config_LIBRARY == 'ALL' or not self.config_LIBRARY:
-    #         recently_added_videos = self.plexserver.library.recentlyAdded()
-    #         for library in self.plexserver.library.sections():
-    #             if library.type == 'photo': continue
-    #             for collection in library.collections():
-    #                 recently_added_collections.append(collection)
-    #         _LOGGER.info(f"{plugins_name}未指定需要整理的媒体库或设置为ALL，将整理全库中的最近 {sortout_num} 项")
-    #         # _LOGGER.error(f"{plugins_name}所有库最近 {sortout_num} 项：{recently_added_videos[:sortout_num]}")
-    #         # _LOGGER.error(f"{plugins_name}所有库最近 {sortout_num} 项：{recently_added_collections[:sortout_num]}")
-    #     else:
-    #         library_names = self.config_LIBRARY.split(',')
-    #         _LOGGER.info(f"{plugins_name}指定需要整理的媒体库为：{library_names}")
-    #         if library_section_title and library_section_title not in library_names:
-    #             _LOGGER.info(f"{plugins_name}新入库媒体所属库为：['{library_section_title}']，不属于需要整理的媒体库，跳过整理！")
-    #             return
-    #         _LOGGER.info(f"{plugins_name}开始整理指定库中最近添加的 {sortout_num} 个媒体和合集")
-    #         # 获取所有指定库中最近添加的 sortout_num 项
-    #         for library_name in library_names:
-    #             library = self.plexserver.library.section(library_name)
-    #             if library.type == 'photo': continue
-    #             collections = library.collections()
-    #             collections.sort(key=lambda collection: collection.addedAt, reverse=True)
-    #             # _LOGGER.error(f"{library_name}中的库0：{collections}")
-    #             # 库中最近添加媒体
-    #             library_recently_added_videos = library.recentlyAdded()[:sortout_num]
-    #             if len(library_recently_added_videos) > 0:
-    #                 recently_added_videos.extend(library_recently_added_videos)
-    #             # 库中最近添加合集
-    #             library_recently_added_collections = collections[:sortout_num]
-    #             if len(library_recently_added_collections) > 0:
-    #                 recently_added_collections.extend(library_recently_added_collections)
-    #         # _LOGGER.error(f"{plugins_name}所有指定库最近 {sortout_num} 个合集，未排序前：\n{recently_added_collections}")
-    #         # _LOGGER.error(f"{plugins_name}所有指定库最近 {sortout_num} 项，未排序前：\n{recently_added_videos}")
+        # 处理合集
+        for videoNum, collection in enumerate(recently_added_collections):
+            if videoNum > sortout_num - 1:
+                break
+            if self.config_Collection and collection:
+                _LOGGER.info(f"{plugins_name}开始处理合集 ['{collection.title}']")
+                locked_info = []
+                locked_info = collection.fields
+                if locked_info:
+                    _LOGGER.info(f'「{collection.title}」当前元数据锁定情况：{locked_info}')
+                else:
+                    _LOGGER.info(f'「{collection.title}」当前没有锁定任何元数据')
+                # 判断标题排序和标题是否相同,如果是不相同则视为手动修改过，不处理。
+                if self.config_Poster:
+                    for i in range(max_retry):
+                        try:
+                            self.process_fanart(collection,locked_info)
+                            break
+                        except Exception as e:
+                            _LOGGER.error(f"{plugins_name} 处理 ['{collection.title}'] Fanart封面筛选异常，原因：{e}")
+                            time.sleep(5)
+                            continue
+                if collection.titleSort != collection.title and self.config_SortTitle:
+                    _LOGGER.info(f"「{collection.title}」合集的标题排序为: ['{collection.titleSort}'], 已锁定或手动调整过，不进行翻译替换\n")
+                else:
+                    for i in range(max_retry):
+                        try:
+                            self.process_sorttitle(collection,locked_info)
+                            break
+                        except Exception as e:
+                            _LOGGER.error(f"{plugins_name} 处理 ['{collection.title}'] 首字母排序异常，原因：{e}")
+                            time.sleep(5)
+                            continue
 
-    #     # 按照添加时间排序
-    #     recently_added_collections.sort(key=lambda collection: collection.addedAt, reverse=True)
-    #     recently_added_videos.sort(key=lambda video: video.addedAt, reverse=True)
-    #     # _LOGGER.error(f"{plugins_name}所有指定库最近 {sortout_num} 个合集，排序后：\n{recently_added_collections}")
-    #     # _LOGGER.error(f"{plugins_name}所有指定库最近 {sortout_num} 项，排序后：\n{recently_added_videos}")
-        
-    #     for videoNum, collection in enumerate(recently_added_collections):
-    #         if videoNum > sortout_num - 1:
-    #             break
-    #         if self.config_Collection and collection:
-    #             _LOGGER.info(f"{plugins_name}开始处理合集 ['{collection.title}']")
-
-    #             locked_info = []
-    #             locked_info = collection.fields
-    #             if locked_info:
-    #                 _LOGGER.info(f'「{collection.title}」当前元数据锁定情况：{locked_info}')
-    #             else:
-    #                 _LOGGER.info(f'「{collection.title}」当前没有锁定任何元数据')
-
-    #             # 判断标题排序和标题是否相同,如果是不相同则视为手动修改过，不处理。
-    #             if self.config_Poster:
-    #                 for i in range(max_retry):
-    #                     try:
-    #                         self.process_fanart(collection,locked_info)
-    #                         break
-    #                     except Exception as e:
-    #                         _LOGGER.error(f"{plugins_name} 处理 ['{collection.title}'] Fanart封面筛选异常，原因：{e}")
-    #                         time.sleep(5)
-    #                         continue
-
-    #             if collection.titleSort != collection.title and self.config_SortTitle:
-    #                 _LOGGER.info(f"「{collection.title}」合集的标题排序为: ['{collection.titleSort}'], 已锁定或手动调整过，不进行翻译替换\n")
-    #             else:
-    #                 for i in range(max_retry):
-    #                     try:
-    #                         self.process_sorttitle(collection,locked_info)
-    #                         break
-    #                     except Exception as e:
-    #                         _LOGGER.error(f"{plugins_name} 处理 ['{collection.title}'] 首字母排序异常，原因：{e}")
-    #                         time.sleep(5)
-    #                         continue
-
-
-    #     # 整理最近添加的媒体
-    #     for videoNum, video in enumerate(recently_added_videos):
-    #         if videoNum > sortout_num - 1:
-    #             break
-    #         if video:
-    #             _LOGGER.info(f"{plugins_name}开始处理 ['{video.title}']")
-
-    #             locked_info = []
-    #             locked_info = video.fields
-    #             if locked_info:
-    #                 _LOGGER.info(f'「{video.title}」当前元数据锁定情况：{locked_info}')
-    #             else:
-    #                 _LOGGER.info(f'「{video.title}」当前没有锁定任何元数据')
-
-    #             if video.type == "season":
-    #                 parentkey = video.parentRatingKey
-    #                 tvshows = self.plexserver.library.search(id=parentkey)
-    #                 # plex.library.
-    #                 # print(tvshows[0].title)
-    #                 #标签翻译整理
-    #                 editvideo=tvshows[0]
-    #             else:
-    #                 # print(video.title)
-    #                 editvideo=video
-
-    #             # Fanart 精美封面筛选
-    #             if self.config_Poster:
-    #                 # self.process_fanart(editvideo)
-    #                 for i in range(max_retry):
-    #                     try:
-    #                         self.process_fanart(editvideo,locked_info)
-    #                         break
-    #                     except Exception as e:
-    #                         _LOGGER.error(f"{plugins_name} 处理 ['{video.title}'] Fanart 封面筛选异常，原因：{e}")
-    #                         time.sleep(5)
-    #                         editvideo.reload()
-    #                         continue
-    #             # 标签翻译整理
-    #             if self.config_Genres:
-    #                 # self.process_tag(editvideo)
-    #                 for i in range(max_retry):
-    #                     try:
-    #                         self.process_tag(editvideo)
-    #                         break
-    #                     except Exception as e:
-    #                         _LOGGER.error(f"{plugins_name} 处理 ['{video.title}'] 标签翻译异常，原因：{e}")
-    #                         time.sleep(5)
-    #                         editvideo.reload()
-    #                         continue
-    #             # 首字母排序
-    #             if self.config_SortTitle:
-    #                 # self.process_sorttitle(editvideo)
-    #                 for i in range(max_retry):
-    #                     try:
-    #                         self.process_sorttitle(editvideo,locked_info)
-    #                         break
-    #                     except Exception as e:
-    #                         _LOGGER.error(f"{plugins_name} 处理 ['{video.title}'] 首字母排序异常，原因：{e}")
-    #                         time.sleep(5)
-    #                         editvideo.reload()
-    #                         continue
-    #         else:
-    #             print(f"{videoNum+1}. (no item found)")
-
-    #     _LOGGER.info(f'{plugins_name}自动运行完成')
-        # else:
-        #     _LOGGER.info(f'{plugins_name}自动运行失败 [None Plex Server]')
+        _LOGGER.info(f"{plugins_name}新入库影片：['{video_title}'] 和 最近添加的 {sortout_num} 个合集整理完成")
