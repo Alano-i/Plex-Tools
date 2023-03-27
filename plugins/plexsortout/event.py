@@ -134,7 +134,7 @@ def webhook():
 
         # 如果是照片库直接跳过
         if library_section_type == 'photo': return api_result(code=0, message=plex_event, data=data)
-        _LOGGER.info(f'{plugins_name}接收到 PLEX 通过 Webhook 传过来的「入库事件」，开始整理')
+        _LOGGER.info(f'{plugins_name}接收到 PLEX 通过 Webhook 传过来的「入库事件」，开始分析事件')
         
         # 执行自动整理
         # plexst.process(library_section_title)
