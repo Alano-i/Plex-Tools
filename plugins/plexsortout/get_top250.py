@@ -35,7 +35,7 @@ def get_top250_config(config):
     else:
         _LOGGER.info(f'{plugins_name}未设置 TMDB API KEY，请先设置')
         
-def get_douban_top250():
+def get_douban_top250_cn_name():
     url = 'https://movie.douban.com/top250'
     response = session.request("GET", url, headers=headers, timeout=30)  
     html = etree.HTML(response.text)
@@ -65,6 +65,75 @@ def get_douban_top250():
             _LOGGER.info(f'{plugins_name}最新「豆瓣TOP250」列表与缓存相同，共 {len(movies)} 部电影，如下：\n{movies}')
     else:
         _LOGGER.error(f'{plugins_name}获取「豆瓣TOP250」列表失败')
+
+def get_douban_top250():
+    url = 'https://movie.douban.com/top250'
+    response = session.request("GET", url, headers=headers, timeout=30)  
+    html = etree.HTML(response.text)
+    movies = []
+    for start in range(0, 250, 25):
+        page_url = f'{url}?start={start}'
+        response = session.request("GET", page_url, headers=headers, timeout=30)
+        if response.status_code == 200:
+            html = etree.HTML(response.text)
+            for i in range(1, 26):
+                title_xpath = f'//*[@id="content"]/div/div[1]/ol/li[{i}]/div/div[2]/div[1]/a/span[1]/text()'
+                year_xpath = f'//*[@id="content"]/div/div[1]/ol/li[{i}]/div/div[2]/div[2]/p/text()'
+                year_info = html.xpath(year_xpath)[1].strip()
+                title = html.xpath(title_xpath)[0]
+                match = re.search(r'\d{4}', year_info)
+                if match:
+                    year = match.group(0)
+                else:
+                    year = ''
+                movies.append({'title': title, 'year': int(year)})
+        else:
+            _LOGGER.error(f'{plugins_name}请求豆瓣 TOP250 失败：{response.text}')
+    return movies
+
+# 根据豆瓣电影名称和发行年份，在TMDB API中进行查询
+def tmdb_search_movie(title, year):
+    API_URL = 'https://api.themoviedb.org/3'
+    response = requests.get(
+        f'{API_URL}/search/movie',
+        params={
+            'api_key': tmdb_api_key,
+            'query': title,
+            'year': year,
+            'with_genres': '18' # 限制搜索结果只包含电影类型的影片
+        }
+    )
+    if response.status_code != 200:
+        return None
+    results = response.json().get('results')
+    if not results:
+        return None
+    # 如果存在多个结果，则返回第一个结果
+    return results[0]
+
+def get_douban_top250_tmdb_list():
+    douban_top250 = get_douban_top250()
+    old_douban_top250_list = server.common.get_cache('top250', 'douban') or []
+    # 根据豆瓣Top 250电影列表，建立电影名称和TMDB ID之间的对应关系
+    douban_top250_tmdb_list = []
+    for movie in douban_top250:
+        title = movie['title']
+        year = movie['year']
+        result = tmdb_search_movie(title, year)
+        if result:
+            douban_top250_tmdb_list.append(result['id'])
+        else:
+            _LOGGER.error(f"{plugins_name}获取{movie} tmdb_id 失败")
+
+    if douban_top250_tmdb_list:
+        if old_douban_top250_list != douban_top250_tmdb_list:
+            server.common.set_cache('top250', 'douban', movies)
+            new_douban_top250_list = server.common.get_cache('top250', 'douban') or []
+            _LOGGER.info(f'{plugins_name}最新「豆瓣TOP250」列表已存入缓存，共 {len(douban_top250_tmdb_list)} 部电影，如下：\n{new_douban_top250_list}')
+        else:
+            _LOGGER.info(f'{plugins_name}最新「豆瓣TOP250」列表与缓存相同，共 {len(douban_top250_tmdb_list)} 部电影，如下：\n{douban_top250_tmdb_list}')
+    else:
+        _LOGGER.error(f'{plugins_name}获取「豆瓣TOP250对应的 tmdb id」列表失败')
 
 # 通过 IMDb ID 获取 TMDb ID
 def get_tmdb_id(imdb_id, api_key):
@@ -142,6 +211,42 @@ def get_imdb_top_250():
     # else:
     #     _LOGGER.error(f'{plugins_name}获取「IMDB TOP250」列表失败')
 
+def get_imdb_top_250_cn_name():
+    if not tmdb_api_key:
+        _LOGGER.info(f'{plugins_name}未设置 TMDB API KEY，请先设置')
+        return
+    old_imdb_top250_list = server.common.get_cache('top250', 'imdb') or []
+    # _LOGGER.info(f'{plugins_name}「IMDB TOP250」列表已有缓存，共 {len(old_imdb_top250_list)} 部电影，如下：\n{old_imdb_top250_list}')
+    url = 'https://www.imdb.com/chart/top'
+    response = session.request("GET", url, headers=headers, timeout=30)
+    if response.status_code == 200:
+        html = etree.HTML(response.text)
+        # 获取 imdbtop250 电影 imdb id
+        imdb_ids = html.xpath('//td[@class="titleColumn"]/a/@href')
+        imdb_ids = [id.split('/')[2] for id in imdb_ids]
+        # _LOGGER.info(f'imdb_ids:{imdb_ids}')
+        imdb_top250_chinese_name = []
+        for imdb_id in imdb_ids:
+            try:
+                chinese_name = get_chinese_name(imdb_id)
+                imdb_top250_chinese_name.append(chinese_name)
+            except Exception as e:
+                _LOGGER.error(f"{plugins_name} 获取影片中文名失败，请检查网络，原因：{e}")
+                break
+        #    _LOGGER.info(imdb_top250_chinese_name)
+    else:
+        _LOGGER.error(f'{plugins_name}获取 IMDB TOP250 电影的 TMDb ID 失败')
+
+    if imdb_top250_chinese_name:
+        if old_imdb_top250_list != imdb_top250_chinese_name:
+            server.common.set_cache('top250', 'imdb', imdb_top250_chinese_name)
+            new_imdb_top250_list = server.common.get_cache('top250', 'imdb') or []
+            _LOGGER.info(f'{plugins_name}最新「IMDB TOP250」列表已存入缓存，共 {len(imdb_top250_chinese_name)} 部电影，如下：\n{new_imdb_top250_list}')
+        else:
+            _LOGGER.info(f'{plugins_name}最新「IMDB TOP250」列表与缓存相同，共 {len(imdb_top250_chinese_name)} 部电影，如下：\n{imdb_top250_chinese_name}')
+    else:
+        _LOGGER.error(f'{plugins_name}获取「IMDB TOP250」列表失败')
+
 def get_top250():
-    get_douban_top250()
+    get_douban_top250_tmdb_list()
     get_imdb_top_250()
