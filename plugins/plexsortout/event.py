@@ -5,6 +5,7 @@ from flask import Blueprint, request
 from mbot.common.flaskutils import api_result
 import json
 import time
+import threading
 # from plexapi.server import PlexServer
 
 from mbot.core.event.models import EventType
@@ -120,21 +121,38 @@ def webhook():
     # if plex_event in ['library.on.deck', 'library.new', 'media.play', 'media.pause', 'media.resume'] and added:
     if plex_event in ['library.on.deck', 'library.new'] and added:
         metadata = data.get('Metadata', '')
-        librarySectionTitle = metadata.get('librarySectionTitle', '')
+        library_section_title = metadata.get('librarySectionTitle', '')
         # 媒体库类型：show artist movie photo
-        librarySectionType = metadata.get('librarySectionType', '')
+        library_section_type = metadata.get('librarySectionType', '')
+        rating_key = metadata.get('ratingKey', '')
+        parent_rating_key = metadata.get('parentRatingKey', '')
+        grandparent_rating_key = metadata.get('grandparentRatingKey', '')
+        grandparent_title = metadata.get('grandparentTitle', '')
+        parent_title = metadata.get('parentTitle', '')
+        org_title = metadata.get('title', '')
+        org_type = metadata.get('type', '')
+
         # 如果是照片库直接跳过
-        if librarySectionType == 'photo': return api_result(code=0, message=plex_event, data=data)
-        if time.time() - last_event_time < 75:
-            last_event_count = last_event_count + 1
-            _LOGGER.info(f'{plugins_name}75 秒内接收到 {last_event_count} 条入库事件，只处理一次')
-        else:
-            last_event_time = time.time()
-            last_event_count = 1
-            time.sleep(60)
-            _LOGGER.info(f'{plugins_name}接收到 PLEX 通过 Webhook 传过来的「入库事件」，开始整理')
-            # 执行自动整理
-            plexst.process(librarySectionTitle)
+        if library_section_type == 'photo': return api_result(code=0, message=plex_event, data=data)
+        _LOGGER.info(f'{plugins_name}接收到 PLEX 通过 Webhook 传过来的「入库事件」，开始整理')
+        
+        # 执行自动整理
+        # plexst.process(library_section_title)
+        # thread = threading.Thread(target=lambda: plexst.process(library_section_title))
+        thread = threading.Thread(target=plexst.process_new, args=(library_section_title,rating_key,parent_rating_key,grandparent_rating_key,grandparent_title,parent_title,org_title,org_type))
+        thread.start()
+
+        # if time.time() - last_event_time < 75:
+        #     last_event_count = last_event_count + 1
+        #     _LOGGER.info(f'{plugins_name}75 秒内接收到 {last_event_count} 条入库事件，只处理一次')
+        # else:
+        #     last_event_time = time.time()
+        #     last_event_count = 1
+        #     time.sleep(60)
+        #     _LOGGER.info(f'{plugins_name}接收到 PLEX 通过 Webhook 传过来的「入库事件」，开始整理')
+        #     # 执行自动整理
+        #     plexst.process(library_section_title)
+
     return api_result(code=0, message=plex_event, data=data)
 
     # plex_event_all = {
