@@ -723,7 +723,7 @@ class plexsortout:
         time.sleep(random.randint(50, 70))
 
         # 指定要获取最近添加项的库
-        if self.config_LIBRARY == 'ALL' or not self.config_LIBRARY:
+        if str(self.config_LIBRARY).lower() == 'all' or not self.config_LIBRARY:
             if self.config_Collection:
                 for library in self.plexserver.library.sections():
                     if library.type == 'photo': continue
@@ -731,6 +731,7 @@ class plexsortout:
                         recently_added_collections.append(collection)
                 _LOGGER.info(f"{plugins_name}未指定需要整理的媒体库或设置为ALL，将整理全库中的最近 {sortout_num} 个合集")
         else:
+            library_names = ''
             library_names = self.config_LIBRARY.split(',')
             _LOGGER.info(f"{plugins_name}指定需要整理的媒体库为：{library_names}")
             if library_section_title and library_section_title not in library_names:
@@ -756,6 +757,7 @@ class plexsortout:
             try:
                 # 通过入库事件传来的媒体唯一 ratingkey 来获取 video 对象，这个对象包含媒体的所有信息
                 video = self.plexserver.fetchItem(int(rating_key))
+                break
             except Exception as e:
                 _LOGGER.error(f"{plugins_name} 获取新添加的媒体对象失败，原因：{e}")
                 time.sleep(5)
