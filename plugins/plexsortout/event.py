@@ -30,7 +30,7 @@ def after_setup(plugin: PluginMeta, plugin_conf: dict):
     """
     _LOGGER.info(f'{plugins_name}插件开始加载')
     # global added, libtable , plex_url, plex_token
-    global added, libtable
+    global added
     added = plugin_conf.get('Added') if plugin_conf.get('Added') else None
     if added:
         _LOGGER.info(f'{plugins_name}使用「PLEX 入库事件」作为触发运行')
@@ -38,12 +38,13 @@ def after_setup(plugin: PluginMeta, plugin_conf: dict):
         _LOGGER.info(f'{plugins_name}使用「Mbot 下载完成事件」作为触发运行')
     libstr = plugin_conf.get('LIBRARY')
     if libstr:
-        libtable=libstr.split(',')
-        _LOGGER.info(f'{plugins_name}需要整理的库：{libtable}')
-        plugin_conf['library']=libtable
+        if str(libstr).lower() != 'all':
+            libtable=libstr.split(',')
+            _LOGGER.info(f'{plugins_name}需要整理的库：{libtable}')
+            # plugin_conf['library']=libtable
     else:
-        _LOGGER.info(f'{plugins_name}未设置需要整理的媒体库名称')
-        plugin_conf['library'] = 'ALL'
+        _LOGGER.info(f'{plugins_name}未设置需要整理的媒体库名称，将默认整理所有库')
+        # plugin_conf['library'] = 'ALL'
     
     # plex_url = plugin_conf.get('plex_url')
     # plex_token = plugin_conf.get('plex_token')
@@ -70,7 +71,7 @@ def config_changed(plugin_conf: dict):
     插件变更配置后执行的操作
     """
     _LOGGER.info(f'{plugins_name}配置发生变更，加载新配置')
-    global added, libtable
+    global added
     added = plugin_conf.get('Added') if plugin_conf.get('Added') else None
     if added:
         _LOGGER.info(f'{plugins_name}使用「PLEX 入库事件」作为触发运行')
@@ -78,12 +79,13 @@ def config_changed(plugin_conf: dict):
         _LOGGER.info(f'{plugins_name}使用「Mbot 下载完成事件」作为触发运行')
     libstr = plugin_conf.get('LIBRARY')
     if libstr:
-        libtable=libstr.split(',')
-        _LOGGER.info(f'{plugins_name}需要整理的库：{libtable}')
-        plugin_conf['library']=libtable
+        if str(libstr).lower() != 'all':
+            libtable=libstr.split(',')
+            _LOGGER.info(f'{plugins_name}需要整理的库：{libtable}')
+            # plugin_conf['library']=libtable
     else:
-        _LOGGER.info(f'{plugins_name}未设置需要整理的媒体库名称')
-        plugin_conf['library'] = 'ALL'
+        _LOGGER.info(f'{plugins_name}未设置需要整理的媒体库名称，将默认整理所有库')
+        # plugin_conf['library'] = 'ALL'
     
     # plex_url = plugin_conf.get('plex_url')
     # plex_token = plugin_conf.get('plex_token')
