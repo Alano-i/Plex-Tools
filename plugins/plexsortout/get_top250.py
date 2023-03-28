@@ -94,15 +94,21 @@ def get_douban_top250():
 # 根据豆瓣电影名称和发行年份，在TMDB API中进行查询
 def tmdb_search_movie(title, year):
     API_URL = 'https://api.themoviedb.org/3'
-    response = requests.get(
-        f'{API_URL}/search/movie',
-        params={
-            'api_key': tmdb_api_key,
-            'query': title,
-            'year': year,
-            'with_genres': '18' # 限制搜索结果只包含电影类型的影片
-        }
-    )
+    for j in range(5):
+        try:
+            response = requests.get(
+                f'{API_URL}/search/movie',
+                params={
+                    'api_key': tmdb_api_key,
+                    'query': title,
+                    'year': year,
+                    'with_genres': '18' # 限制搜索结果只包含电影类型的影片
+                }
+            )
+            break
+        except Exception as e:
+            _LOGGER.error(f"{plugins_name} 第 {j+1} 次获取 ['{title}'] 的 tmdb_id 失败，原因：{e}")
+            continue
     if response.status_code != 200:
         return None
     results = response.json().get('results')
