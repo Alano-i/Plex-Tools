@@ -25,15 +25,17 @@ DouBanTop250 = [278, 10997, 13, 597, 101, 637, 129, 424, 27205, 157336, 37165, 2
 new_douban_top250_list = server.common.get_cache('top250', 'douban') or []
 new_imdb_top250_list = server.common.get_cache('top250', 'imdb') or []
 
-if new_imdb_top250_list and set(IMDBTop250) != set(new_imdb_top250_list):
-    IMDBTop250 = new_imdb_top250_list
-    _LOGGER.info(f"{plugins_name} IMDB TOP250 数据有更新，共 {len(IMDBTop250)} 项")
-    _LOGGER.info(f"{plugins_name} 最新 IMDB TOP250 数据：{IMDBTop250}")
+if len(new_imdb_top250_list) == 250:
+    if set(IMDBTop250) != set(new_imdb_top250_list):
+        IMDBTop250 = new_imdb_top250_list
+        _LOGGER.info(f"{plugins_name} IMDB TOP250 数据有更新，共 {len(IMDBTop250)} 项")
+        _LOGGER.info(f"{plugins_name} 最新 IMDB TOP250 数据：{IMDBTop250}")
 
-if new_douban_top250_list and set(DouBanTop250) != set(new_douban_top250_list):
-    DouBanTop250 = new_douban_top250_list
-    _LOGGER.info(f"{plugins_name} 豆瓣 TOP250 数据有更新，共 {len(DouBanTop250)} 项")
-    _LOGGER.info(f"{plugins_name} 最新豆瓣 TOP250 数据：{DouBanTop250}")
+if len(new_douban_top250_list) == 250:
+    if set(DouBanTop250) != set(new_douban_top250_list):
+        DouBanTop250 = new_douban_top250_list
+        _LOGGER.info(f"{plugins_name} 豆瓣 TOP250 数据有更新，共 {len(DouBanTop250)} 项")
+        _LOGGER.info(f"{plugins_name} 最新豆瓣 TOP250 数据：{DouBanTop250}")
 
 tags = {
     "Action": "动作",
