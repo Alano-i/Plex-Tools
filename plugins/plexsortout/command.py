@@ -34,16 +34,28 @@ is_lock_list = [
     }
 ]
 
+collection_on_list = [
+    {
+        "name": "✅ 开启",
+        "value": True
+    },
+    {
+        "name": "📴 关闭",
+        "value": False
+    }
+]
+
 @plugin.command(name='select_data', title='整理 PLEX 媒体库', desc='自动翻译标签 & 拼音排序 & 添加TOP250标签 & 筛选Fanart封面', icon='HourglassFull',run_in_background=True)
 def select_data(ctx: PluginCommandContext,
                 library: ArgSchema(ArgType.Enum, '选择需要整理的媒体库', '', enum_values=get_enum_data,multi_value=True),
                 threading_num: ArgSchema(ArgType.String, '多线程处理：填线程数量。默认为0，单线程处理', '示例：2000个媒体，设置40，则会启40个线程处理，每个线程处理50个。建议少于100个线程', default_value='0', required=False),
                 sortoutNum: ArgSchema(ArgType.String, '整理数量，示例：50，表示只整理最新的50条，留空整理全部', '', default_value='ALL', required=False),
-                is_lock: ArgSchema(ArgType.Enum, '选择需要执行的操作，留空执行设置中选中的全部操作', '', enum_values=lambda: is_lock_list, default_value='run_all', multi_value=False, required=False)):
+                is_lock: ArgSchema(ArgType.Enum, '选择需要执行的操作，留空执行设置中选中的全部操作', '', enum_values=lambda: is_lock_list, default_value='run_all', multi_value=False, required=False),
+                collection_on_config: ArgSchema(ArgType.Enum, '本次整理是否临时启用合集整理，默认关闭', '', enum_values=lambda: collection_on_list, default_value=False, multi_value=False, required=False)):
     # plexst.config['library']=library
     # plexst.process()
     threading_num = int(threading_num)
-    plexst.process_all(library,sortoutNum,is_lock,threading_num)
+    plexst.process_all(library,sortoutNum,is_lock,threading_num,collection_on_config)
     user_list = list(filter(lambda x: x.role == 1, mbot_api.user.list()))
     if user_list:
         for user in user_list:
@@ -60,6 +72,16 @@ def get_top250_echo(ctx: PluginCommandContext):
     # server.common.set_cache('top250', 'douban', DouBanTop250)
     get_top250()
     _LOGGER.info(f'{plugins_name}手动获取最新 TOP250 列表完成')
+
+
+@plugin.command(name='single_video', title='整理 PLEX 媒体', desc='整理指定电影名称的媒体', icon='MovieFilter', run_in_background=True)
+def single_video(ctx: PluginCommandContext,
+                single_videos: ArgSchema(ArgType.String, '整理指定电影名称的媒体,支持回车换行，一行一条', '', default_value='', required=True)):
+    _LOGGER.info(f'{plugins_name}开始手动整理指定电影名称的媒体')
+    plexst.process_single_video(single_videos)
+    _LOGGER.info(f'{plugins_name}手动整理指定电影名称的媒体完成')
+
+
 
 # @plugin.command(name='plexcollection', title='Plex整理合集首字母', desc='自动整理合集首字母', icon='HourglassFull',run_in_background=True)
 # def echo_c(ctx: PluginCommandContext):
