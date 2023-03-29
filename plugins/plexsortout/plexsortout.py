@@ -352,7 +352,7 @@ class plexsortout:
 
         title = video.title
         # 只有电影类型才需要添加 TOP250 标签
-        if self.config_Top250 and video.TYPE == 'movie':
+        if self.config_Top250 and video.type == 'movie':
             self.add_top250(video)
 
         if video.genres:
@@ -486,7 +486,7 @@ class plexsortout:
                             self.process_fanart(video,locked_info)
                             break
                         except Exception as e:
-                            _LOGGER.error(f"{plugins_name}第 {i+1} 次处理 ['{video.title}'] Fanart封面筛选异常，原因：{e}")
+                            _LOGGER.error(f"{plugins_name}第 {i+1}/{max_retry} 次处理 ['{video.title}'] Fanart封面筛选异常，原因：{e}")
                             time.sleep(5)
                             video.reload()
                             continue
@@ -499,7 +499,7 @@ class plexsortout:
                             self.process_tag(video)
                             break
                         except Exception as e:
-                            _LOGGER.error(f"{plugins_name}第 {i+1} 次处理 ['{video.title}'] 标签翻译异常，原因：{e}")
+                            _LOGGER.error(f"{plugins_name}第 {i+1}/{max_retry} 次处理 ['{video.title}'] 标签翻译异常，原因：{e}")
                             time.sleep(5)
                             video.reload()
                             continue
@@ -511,7 +511,7 @@ class plexsortout:
                             self.process_sorttitle(video,locked_info)
                             break
                         except Exception as e:
-                            _LOGGER.error(f"{plugins_name}第 {i+1} 次处理 ['{video.title}'] 首字母排序异常，原因：{e}")
+                            _LOGGER.error(f"{plugins_name}第 {i+1}/{max_retry} 次处理 ['{video.title}'] 首字母排序异常，原因：{e}")
                             time.sleep(5)
                             video.reload()
                             continue
@@ -523,7 +523,11 @@ class plexsortout:
         _LOGGER.info(f"{plugins_name}{result[is_lock]}")
         
     # 手动选择媒体库整理
-    def process_all(self,library,sortoutNum,is_lock,threading_num):
+    def process_all(self,library,sortoutNum,is_lock,threading_num,collection_on_config):
+        if collection_on_config:
+            collection_on = True
+        else:
+            collection_on = False
         # _LOGGER.error(f"{plugins_name}重试次数： {max_retry}")
         libtable=library
         for i in range(len(libtable)):
@@ -538,7 +542,7 @@ class plexsortout:
             videos.sort(key=lambda video: video.addedAt, reverse=True)
             # _LOGGER.error(f"{plugins_name}排序后：\n{videos}")
             #处理合集
-            if self.config_Collection:
+            if self.config_Collection and collection_on:
                 collections=videos_lib.collections()
                 collections.sort(key=lambda collection: collection.addedAt, reverse=True)
                 collections_num = len(collections)
@@ -573,7 +577,7 @@ class plexsortout:
                                         self.process_fanart(collection,locked_info)
                                         break
                                     except Exception as e:
-                                        _LOGGER.error(f"{plugins_name}第 {i+1} 次处理 ['{collection.title}'] Fanart封面筛选异常，原因：{e}")
+                                        _LOGGER.error(f"{plugins_name}第 {i+1}/{max_retry} 次处理 ['{collection.title}'] Fanart封面筛选异常，原因：{e}")
                                         time.sleep(5)
                                         continue
                         # 判断标题排序和标题是否相同,如果是不相同则视为手动修改过，不处理。
@@ -586,7 +590,7 @@ class plexsortout:
                                     self.process_sorttitle(collection,locked_info)
                                     break
                                 except Exception as e:
-                                    _LOGGER.error(f"{plugins_name}第 {i+1} 次处理 ['{collection.title}'] 首字母排序异常，原因：{e}")
+                                    _LOGGER.error(f"{plugins_name}第 {i+1}/{max_retry} 次处理 ['{collection.title}'] 首字母排序异常，原因：{e}")
                                     time.sleep(5)
                                     continue
 
@@ -662,7 +666,7 @@ class plexsortout:
                                     self.process_fanart(video,locked_info)
                                     break
                                 except Exception as e:
-                                    _LOGGER.error(f"{plugins_name}第 {i+1} 次处理 ['{video.title}'] Fanart封面筛选异常，原因：{e}")
+                                    _LOGGER.error(f"{plugins_name}第 {i+1}/{max_retry} 次处理 ['{video.title}'] Fanart封面筛选异常，原因：{e}")
                                     time.sleep(5)
                                     video.reload()
                                     continue
@@ -675,7 +679,7 @@ class plexsortout:
                                     self.process_tag(video)
                                     break
                                 except Exception as e:
-                                    _LOGGER.error(f"{plugins_name}第 {i+1} 次处理 ['{video.title}'] 标签翻译异常，原因：{e}")
+                                    _LOGGER.error(f"{plugins_name}第 {i+1}/{max_retry} 次处理 ['{video.title}'] 标签翻译异常，原因：{e}")
                                     time.sleep(5)
                                     video.reload()
                                     continue
@@ -687,7 +691,7 @@ class plexsortout:
                                     self.process_sorttitle(video,locked_info)
                                     break
                                 except Exception as e:
-                                    _LOGGER.error(f"{plugins_name}第 {i+1} 次处理 ['{video.title}'] 首字母排序异常，原因：{e}")
+                                    _LOGGER.error(f"{plugins_name}第 {i+1}/{max_retry} 次处理 ['{video.title}'] 首字母排序异常，原因：{e}")
                                     time.sleep(5)
                                     video.reload()
                                     continue
@@ -791,7 +795,7 @@ class plexsortout:
                         self.process_fanart(editvideo,locked_info)
                         break
                     except Exception as e:
-                        _LOGGER.error(f"{plugins_name}第 {i+1} 次处理 ['{video_title}'] Fanart 封面筛选异常，原因：{e}")
+                        _LOGGER.error(f"{plugins_name}第 {i+1}/{max_retry} 次处理 ['{video_title}'] Fanart 封面筛选异常，原因：{e}")
                         time.sleep(5)
                         editvideo.reload()
                         continue
@@ -802,7 +806,7 @@ class plexsortout:
                         self.process_tag(editvideo)
                         break
                     except Exception as e:
-                        _LOGGER.error(f"{plugins_name}第 {i+1} 次处理 ['{video_title}'] 标签翻译异常，原因：{e}")
+                        _LOGGER.error(f"{plugins_name}第 {i+1}/{max_retry} 次处理 ['{video_title}'] 标签翻译异常，原因：{e}")
                         time.sleep(5)
                         editvideo.reload()
                         continue
@@ -813,7 +817,7 @@ class plexsortout:
                         self.process_sorttitle(editvideo,locked_info)
                         break
                     except Exception as e:
-                        _LOGGER.error(f"{plugins_name}第 {i+1} 次处理 ['{video_title}'] 首字母排序异常，原因：{e}")
+                        _LOGGER.error(f"{plugins_name}第 {i+1}/{max_retry} 次处理 ['{video_title}'] 首字母排序异常，原因：{e}")
                         time.sleep(5)
                         editvideo.reload()
                         continue
@@ -855,3 +859,72 @@ class plexsortout:
                             continue
 
         _LOGGER.info(f"{plugins_name}新入库影片：['{video_title}'] 和 最近添加的 {sortout_num} 个合集整理完成")
+    
+    
+    # 整理指定媒体
+    def process_single_video(self, single_videos):
+        video = None
+        single_videos_names = single_videos.split('\n')
+        _LOGGER.info(f"{plugins_name}开始处理 {single_videos_names}")
+        for single_videos_name in single_videos_names:
+            for i in range(max_retry):
+                try:
+                    search_results = self.plexserver.library.search(single_videos_name)
+                    break
+                except Exception as e:
+                    if i+1 == max_retry:
+                        _LOGGER.error(f"{plugins_name} 第 {i+1}/{max_retry} 次在 PLEX 中搜索 ['{single_videos_name}'] 失败，原因：{e}，跳过处理")
+                    else:
+                        _LOGGER.error(f"{plugins_name} 第 {i+1}/{max_retry} 次在 PLEX 中搜索 ['{single_videos_name}'] 失败，原因：{e}")
+                    time.sleep(5)
+                    continue
+            _LOGGER.info(f"{plugins_name}['{single_videos_name}'] 在 PLEX 中共搜索到 {len(search_results)} 条结果：{search_results} ,只处理电影和剧集\n")
+            for video in search_results:
+                if video.type == 'show' or video.type == 'movie':
+                    video_title = ''
+                    video_title = video.title
+                    editvideo=video
+                    locked_info = []
+                    locked_info = editvideo.fields
+                    if locked_info:
+                        _LOGGER.info(f'「{video_title}」当前元数据锁定情况：{locked_info}')
+                    else:
+                        _LOGGER.info(f'「{video_title}」当前没有锁定任何元数据')
+
+                    # Fanart 精美封面筛选
+                    if self.config_Poster:
+                        for i in range(max_retry):
+                            try:
+                                self.process_fanart(editvideo,locked_info)
+                                break
+                            except Exception as e:
+                                _LOGGER.error(f"{plugins_name}第 {i+1}/{max_retry} 次处理 ['{video_title}'] Fanart 封面筛选异常，原因：{e}")
+                                time.sleep(5)
+                                editvideo.reload()
+                                continue
+                    # 标签翻译整理
+                    if self.config_Genres:
+                        for i in range(max_retry):
+                            try:
+                                self.process_tag(editvideo)
+                                break
+                            except Exception as e:
+                                _LOGGER.error(f"{plugins_name}第 {i+1}/{max_retry} 次处理 ['{video_title}'] 标签翻译异常，原因：{e}")
+                                time.sleep(5)
+                                editvideo.reload()
+                                continue
+                    # 首字母排序
+                    if self.config_SortTitle:
+                        for i in range(max_retry):
+                            try:
+                                self.process_sorttitle(editvideo,locked_info)
+                                break
+                            except Exception as e:
+                                _LOGGER.error(f"{plugins_name}第 {i+1}/{max_retry} 次处理 ['{video_title}'] 首字母排序异常，原因：{e}")
+                                time.sleep(5)
+                                editvideo.reload()
+                                continue
+
+                                
+            # _LOGGER.info(f"{plugins_name} {sortout_num} 手动整理指定电影名称的媒体完成")
+            
