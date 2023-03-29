@@ -133,7 +133,7 @@ def get_douban_top250_tmdb_list():
 
     if douban_top250_tmdb_list:
         if old_douban_top250_list != douban_top250_tmdb_list:
-            server.common.set_cache('top250', 'douban', movies)
+            server.common.set_cache('top250', 'douban', douban_top250_tmdb_list)
             new_douban_top250_list = server.common.get_cache('top250', 'douban') or []
             _LOGGER.info(f'{plugins_name}最新「豆瓣TOP250」列表已存入缓存，共 {len(douban_top250_tmdb_list)} 部电影，如下：\n{new_douban_top250_list}')
         else:
