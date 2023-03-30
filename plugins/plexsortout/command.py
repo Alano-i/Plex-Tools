@@ -17,6 +17,7 @@ def get_enum_data():
     """
     _LOGGER.info(f'{plugins_name}开始获取媒体库')
     libtable=plexst.get_library()
+    # _LOGGER.info(f'libtable:{libtable}')
     return libtable
 
 is_lock_list = [
@@ -49,7 +50,7 @@ collection_on_list = [
 def select_data(ctx: PluginCommandContext,
                 library: ArgSchema(ArgType.Enum, '选择需要整理的媒体库', '', enum_values=get_enum_data,multi_value=True),
                 threading_num: ArgSchema(ArgType.String, '多线程处理：填线程数量。默认为0，单线程处理', '示例：2000个媒体，设置40，则会启40个线程处理，每个线程处理50个。建议少于100个线程', default_value='0', required=False),
-                sortoutNum: ArgSchema(ArgType.String, '整理数量，示例：50，表示只整理最新的50条，留空整理全部', '', default_value='ALL', required=False),
+                sortoutNum: ArgSchema(ArgType.String, '整理数量，10 或 10-50，留空整理全部', '说明：10：整理最新的10个，10-50：整理第10-50个（入库时间排序）', default_value='ALL', required=False),
                 is_lock: ArgSchema(ArgType.Enum, '选择需要执行的操作，留空执行设置中选中的全部操作', '', enum_values=lambda: is_lock_list, default_value='run_all', multi_value=False, required=False),
                 collection_on_config: ArgSchema(ArgType.Enum, '本次整理是否临时启用合集整理，默认关闭', '', enum_values=lambda: collection_on_list, default_value=False, multi_value=False, required=False)):
     # plexst.config['library']=library
@@ -79,6 +80,7 @@ def single_video(ctx: PluginCommandContext,
                 single_videos: ArgSchema(ArgType.String, '整理指定电影名称的媒体,支持回车换行，一行一条', '', default_value='', required=True)):
     _LOGGER.info(f'{plugins_name}开始手动整理指定电影名称的媒体')
     plexst.process_single_video(single_videos)
+    # plexst.process_collection()
     _LOGGER.info(f'{plugins_name}手动整理指定电影名称的媒体完成')
 
 
