@@ -7,18 +7,32 @@
   "requirements": null,
   "configField": [
     {
-      "fieldName": "mbot_url",
+      "fieldName": "plex_url",
       "fieldType": "String",
-      "label": "Mbot 的 IP 或域名，示例：http://10.10.10.3:1329",
-      "helperText": "用于接收 PLEX 发送的入库事件",
-      "defaultValue": "http://10.10.10.3:1329"
+      "label": "PLEX 服务器 URL，示例：http://10.10.10.4:32400",
+      "helperText": "",
+      "defaultValue": "http://10.10.10.3:32400"
+    },
+    {
+      "fieldName": "plex_token",
+      "fieldType": "String",
+      "label": "PLEX 服务器 TOKEN",
+      "helperText": "",
+      "defaultValue": ""
     },
     {
       "fieldName": "Added",
       "fieldType": "Bool",
-      "label": "使用Plex入库事件作为触发运行,默认MR下载完成时运行",
+      "label": "启用 PLEX 入库事件触发实时整理最新入库的媒体",
       "helperText": "",
       "defaultValue": false
+    },
+    {
+      "fieldName": "mbot_url",
+      "fieldType": "String",
+      "label": "填写 Mbot URL，用于接收入库事件，示例：http://10.10.10.3:1329",
+      "helperText": "",
+      "defaultValue": "http://10.10.10.3:1329"
     },
     {
       "fieldName": "SortTitle",
