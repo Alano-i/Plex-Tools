@@ -30,12 +30,13 @@ def after_setup(plugin: PluginMeta, plugin_conf: dict):
     """
     _LOGGER.info(f'{plugins_name}插件开始加载')
     # global added, libtable , plex_url, plex_token
-    global added
+    global added,collection_on,libtable,libstr
     added = plugin_conf.get('Added') if plugin_conf.get('Added') else None
+    collection_on = plugin_conf.get('Collection') if plugin_conf.get('Collection') else None
     if added:
-        _LOGGER.info(f'{plugins_name}使用「PLEX 入库事件」作为触发运行')
+        _LOGGER.info(f'{plugins_name}启用「PLEX 入库事件」触发整理实时入库的媒体')
     else:
-        _LOGGER.info(f'{plugins_name}使用「Mbot 下载完成事件」作为触发运行')
+        _LOGGER.info(f'{plugins_name}未启用「PLEX 入库事件」触发整理实时入库的媒体')
     libstr = plugin_conf.get('LIBRARY')
     if libstr:
         if str(libstr).lower() != 'all':
@@ -71,12 +72,13 @@ def config_changed(plugin_conf: dict):
     插件变更配置后执行的操作
     """
     _LOGGER.info(f'{plugins_name}配置发生变更，加载新配置')
-    global added
+    global added,collection_on,libtable,libstr
     added = plugin_conf.get('Added') if plugin_conf.get('Added') else None
+    collection_on = plugin_conf.get('Collection') if plugin_conf.get('Collection') else None
     if added:
-        _LOGGER.info(f'{plugins_name}使用「PLEX 入库事件」作为触发运行')
+        _LOGGER.info(f'{plugins_name}启用「PLEX 入库事件」触发整理实时入库的媒体')
     else:
-        _LOGGER.info(f'{plugins_name}使用「Mbot 下载完成事件」作为触发运行')
+        _LOGGER.info(f'{plugins_name}未启用「PLEX 入库事件」触发整理实时入库的媒体')
     libstr = plugin_conf.get('LIBRARY')
     if libstr:
         if str(libstr).lower() != 'all':
@@ -166,6 +168,27 @@ def webhook():
     #     'library.new': '新片入库'
     # }
 
+@plugin.task('process_collection', '「整理 PLEX 合集」', cron_expression='50 4 * * *')
+def task():
+    if collection_on:
+        _LOGGER.info(f'{plugins_name}定时任务启动，开始处理 PLEX 合集')
+        plexst.process_collection()
+    else:
+        _LOGGER.info(f'{plugins_name}定时任务启动，未开启合集整理，跳过处理')
+
+@plugin.task('process_recent', '「整理 最近10项」', cron_expression='18 3 * * *')
+def process_recent():
+    if str(libstr).lower() == 'all' or not libstr:
+        try:
+            libtables = plexst.get_library()
+            libtable = [value['value'] for value in libtables]
+        except Exception as e:
+            _LOGGER.error(f"{plugins_name}获取所有媒体库出错，原因：{e}")
+    else:
+        libtable=libstr.split(',')
+    plexst.process_all(libtable,'10','run_all',0,False)
+
+
 # @plugin.on_event(
 #     bind_event=['PlexActivityEvent'], order=1)
 # def on_event(ctx: PluginContext, event_type: str, data: Dict):
@@ -179,17 +202,17 @@ def webhook():
 #         plexst.process()
 #     # plexst.send_by_event(event_type, data)
 
-@plugin.on_event(
-    bind_event=[EventType.DownloadCompleted], order=1)
-def on_event(ctx: PluginContext, event_type: str, data: Dict):
-    """
-    触发绑定的事件后调用此函数
-    函数接收参数固定。第一个为插件上下文信息，第二个事件类型，第三个事件携带的数据
-    """
-    # _LOGGER.info(f'{plugins_name}接收到「DownloadCompleted」事件，现在开始整理')
-    if not added:
-        _LOGGER.info(f'{plugins_name}接收到「下载完成事件」且未开启入库事件触发，现在开始整理')
-        plexst.process()
-    else:
-        _LOGGER.info(f'{plugins_name}接收到「下载完成事件」但已开启入库事件触发，将等待 PLEX 入库后再整理')
-    # plexst.send_by_event(event_type, data)
+# @plugin.on_event(
+#     bind_event=[EventType.DownloadCompleted], order=1)
+# def on_event(ctx: PluginContext, event_type: str, data: Dict):
+#     """
+#     触发绑定的事件后调用此函数
+#     函数接收参数固定。第一个为插件上下文信息，第二个事件类型，第三个事件携带的数据
+#     """
+#     # _LOGGER.info(f'{plugins_name}接收到「DownloadCompleted」事件，现在开始整理')
+#     if not added:
+#         _LOGGER.info(f'{plugins_name}接收到「下载完成事件」且未开启入库事件触发，现在开始整理')
+#         plexst.process()
+#     else:
+#         _LOGGER.info(f'{plugins_name}接收到「下载完成事件」但已开启入库事件触发，将等待 PLEX 入库后再整理')
+    
