@@ -186,7 +186,7 @@ def process_recent():
             _LOGGER.error(f"{plugins_name}获取所有媒体库出错，原因：{e}")
     else:
         libtable=libstr.split(',')
-    plexst.process_all(libtable,'10','run_all',0,False)
+    plexst.process_all(libtable,'10','run_all',0,False,True)
 
 
 # @plugin.on_event(
