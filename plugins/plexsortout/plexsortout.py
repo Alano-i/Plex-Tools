@@ -217,27 +217,6 @@ class plexsortout:
         else:
             _LOGGER.info(f"「{video.title}」的标签都是中文，不需要翻译")
 
-    def updategenre_spare(self, genres_all):
-        genres = genres_all
-        englist = []
-        chlist = []
-        for tag in genres:
-            enggenre = tag
-            if enggenre in tags.keys():
-                englist.append(enggenre)
-                zhQuery = tags[enggenre]
-                chlist.append(zhQuery)
-        if len(englist) > 0:
-            video.addGenre(chlist, locked=False)
-            video.removeGenre(englist, locked=True)
-        else:
-            video.addGenre(chlist, locked=True)
-
-        if chlist:
-            _LOGGER.info(f"「{video.title}」标签翻译整理完成 {chlist}")
-        else:
-            _LOGGER.info(f"「{video.title}」的标签都是中文，不需要翻译")
-
     #获取 PLEX 服务器所有媒体库
     def get_library(self):
         libtable = []
@@ -297,7 +276,6 @@ class plexsortout:
                         locked_info.append(field.name)
                 else:
                     locked_info,genres_all = self.get_video_info(video)
-
 
                 if locked_info:
                     _LOGGER.info(f'「{title}」当前元数据锁定情况：{locked_info}')
