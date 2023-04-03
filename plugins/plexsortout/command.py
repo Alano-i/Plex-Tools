@@ -38,11 +38,21 @@ is_lock_list = [
 collection_on_list = [
     {
         "name": "✅ 开启",
-        "value": True
+        "value": 'on'
     },
     {
         "name": "📴 关闭",
-        "value": False
+        "value": 'off'
+    }
+]
+spare_flag_list = [
+    {
+        "name": "✅ 开启",
+        "value": 'on'
+    },
+    {
+        "name": "📴 关闭",
+        "value": 'off'
     }
 ]
 
@@ -52,11 +62,14 @@ def select_data(ctx: PluginCommandContext,
                 threading_num: ArgSchema(ArgType.String, '多线程处理：填线程数量。默认为0，单线程处理', '示例：2000个媒体，设置40，则会启40个线程处理，每个线程处理50个。建议少于100个线程', default_value='0', required=False),
                 sortoutNum: ArgSchema(ArgType.String, '整理数量，10 或 10-50，留空整理全部', '说明：10：整理最新的10个，10-50：整理第10-50个（入库时间排序）', default_value='ALL', required=False),
                 is_lock: ArgSchema(ArgType.Enum, '选择需要执行的操作，留空执行设置中选中的全部操作', '', enum_values=lambda: is_lock_list, default_value='run_all', multi_value=False, required=False),
-                collection_on_config: ArgSchema(ArgType.Enum, '本次整理是否临时启用合集整理，默认关闭', '', enum_values=lambda: collection_on_list, default_value=False, multi_value=False, required=False)):
+                collection_on_config: ArgSchema(ArgType.Enum, '临时启用合集整理，默认关闭', '', enum_values=lambda: collection_on_list, default_value='off', multi_value=False, required=False),
+                spare_flag: ArgSchema(ArgType.Enum, '启用备用整理方案，默认启用', '', enum_values=lambda: spare_flag_list, default_value='on', multi_value=False, required=False)):
     # plexst.config['library']=library
     # plexst.process()
+    spare_flag = bool(spare_flag and spare_flag.lower() != 'off')
+    collection_on_config = bool(collection_on_config and collection_on_config.lower() != 'off')
     threading_num = int(threading_num)
-    plexst.process_all(library,sortoutNum,is_lock,threading_num,collection_on_config)
+    plexst.process_all(library,sortoutNum,is_lock,threading_num,collection_on_config,spare_flag)
     user_list = list(filter(lambda x: x.role == 1, mbot_api.user.list()))
     if user_list:
         for user in user_list:
@@ -77,9 +90,11 @@ def get_top250_echo(ctx: PluginCommandContext):
 
 @plugin.command(name='single_video', title='整理 PLEX 媒体', desc='整理指定电影名称的媒体', icon='MovieFilter', run_in_background=True)
 def single_video(ctx: PluginCommandContext,
-                single_videos: ArgSchema(ArgType.String, '整理指定电影名称的媒体,支持回车换行，一行一条', '', default_value='', required=True)):
+                single_videos: ArgSchema(ArgType.String, '整理指定电影名称的媒体,支持回车换行，一行一条', '', default_value='', required=True),
+                spare_flag: ArgSchema(ArgType.Enum, '启用备用整理方案，默认启用', '', enum_values=lambda: spare_flag_list, default_value='on', multi_value=False, required=False)):
+    spare_flag = bool(spare_flag and spare_flag.lower() != 'off')
     _LOGGER.info(f'{plugins_name}开始手动整理指定电影名称的媒体')
-    plexst.process_single_video(single_videos)
+    plexst.process_single_video(single_videos,spare_flag)
     # plexst.process_collection()
     _LOGGER.info(f'{plugins_name}手动整理指定电影名称的媒体完成')
 
