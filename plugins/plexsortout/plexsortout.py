@@ -7,6 +7,7 @@ import re
 import time
 import threading
 import random
+from urllib3.exceptions import ConnectTimeoutError
 from mbot.openapi import media_server_manager
 from plexapi.server import PlexServer
 
@@ -117,7 +118,7 @@ class plexsortout:
             while True:
                 if not self.connected:
                     self.connect_plex()
-                time.sleep(30)
+                time.sleep(60)
         connection_thread = threading.Thread(target=keep_connection)
         connection_thread.setDaemon(True)
         connection_thread.start()
@@ -224,20 +225,23 @@ class plexsortout:
                 title = video.title
                 # if reconnect_falg:
                 #     # video.reload()
+                # video.reload(fields=True)
                 locked_info = video.fields
                 if locked_info:
                     _LOGGER.info(f'「{title}」当前元数据锁定情况：{locked_info}')
                 else:
                     _LOGGER.info(f'「{title}」当前没有锁定任何元数据')
                 break
-            except Exception as e:
-                _LOGGER.error(f"{plugins_name}第 {i+1}/{max_retry} 次获取 ['{title}'] 元数据锁定情况失败，原因：{e}")                    
-                ######################
-                self.connected = False
+            except ConnectTimeoutError as e:
+                _LOGGER.error(f"{plugins_name}第 {i+1}/{max_retry} 次获取 ['{title}'] 元数据锁定情况，连接失败等待10秒重连，原因：{e}")
                 time.sleep(10)
+                self.connected = False
                 self.connect_plex()
                 reconnect_falg = True
-                ######################
+                continue
+            except Exception as e:
+                _LOGGER.error(f"{plugins_name}第 {i+1}/{max_retry} 次获取 ['{title}'] 元数据锁定情况失败，原因：{e}")
+                time.sleep(10)
                 continue
         return video, locked_info
         
@@ -253,15 +257,19 @@ class plexsortout:
                 video.unlockPoster()
                 _LOGGER.info(f'「{video.title}」海报和背景已经解锁，PLEX 服务器可以自动更新了\n')
                 break
-            except Exception as e:
+            except ConnectTimeoutError as e:
                 _LOGGER.error(f"{plugins_name}第 {i+1}/{max_retry} 次解锁 ['{title}'] 海报和背景异常，原因：{e}")
-                ######################
-                self.connected = False
                 time.sleep(10)
+                self.connected = False
                 self.connect_plex()
                 reconnect_falg = True
-                ######################
                 continue
+            except Exception as e:
+                _LOGGER.error(f"{plugins_name}第 {i+1}/{max_retry} 次解锁 ['{title}'] 海报和背景异常，原因：{e}")
+                time.sleep(10)
+                continue
+
+
     # 锁定海报和背景
     def process_lock_poster_and_art(self,video):
         reconnect_falg = False
@@ -274,14 +282,16 @@ class plexsortout:
                 video.lockPoster()
                 _LOGGER.info(f'「{video.title}」海报和背景已经锁定，PLEX 服务器不会再自动更新了\n')
                 break
-            except Exception as e:
+            except ConnectTimeoutError as e:
                 _LOGGER.error(f"{plugins_name}第 {i+1}/{max_retry} 次锁定 ['{title}'] 海报和背景异常，原因：{e}")
-                ######################
-                self.connected = False
                 time.sleep(10)
+                self.connected = False
                 self.connect_plex()
                 reconnect_falg = True
-                ######################
+                continue
+            except Exception as e:
+                _LOGGER.error(f"{plugins_name}第 {i+1}/{max_retry} 次锁定 ['{title}'] 海报和背景异常，原因：{e}")
+                time.sleep(10)
                 continue
     # 筛选fanart封面
     def process_fanart(self,video,locked_info):
@@ -354,14 +364,16 @@ class plexsortout:
                 else:
                     _LOGGER.info(f'「{title}」当前选择的背景已经锁定，不做修改！')
                 break
-            except Exception as e:
-                _LOGGER.error(f"{plugins_name}第 {i+1}/{max_retry} 次处理 ['{title}'] Fanart 封面筛选异常，原因：{e}")
-                ######################
-                self.connected = False
+            except ConnectTimeoutError as e:
+                _LOGGER.error(f"{plugins_name}第 {i+1}/{max_retry} 次处理 ['{title}'] Fanart 封面筛选异常，连接失败等待10秒重连，原因：{e}")
                 time.sleep(10)
+                self.connected = False
                 self.connect_plex()
                 reconnect_falg = True
-                ######################
+                continue
+            except Exception as e:
+                _LOGGER.error(f"{plugins_name}第 {i+1}/{max_retry} 次处理 ['{title}'] Fanart 封面筛选异常，原因：{e}")
+                time.sleep(10)
                 continue
             
     # 排序修改为首字母
@@ -372,10 +384,11 @@ class plexsortout:
                 title = video.title
                 # if reconnect_falg:
                 #     video.reload()
+                video_titleSort = video.titleSort
                 if 'titleSort' not in [field.name for field in locked_info]:
                     # video.editTags(tag="actor", items=[x.tag for x in video.actors], remove=True)
-                    if video.titleSort:  # 判断是否已经有标题
-                        con = video.titleSort
+                    if video_titleSort:  # 判断是否已经有标题
+                        con = video_titleSort
                         if (self.check_contain_chinese(con) or RECOVER):
                             SortTitle = self.chinese2pinyin(title)
                             SortTitle = self.removePunctuation(SortTitle)
@@ -385,16 +398,18 @@ class plexsortout:
                             except Exception as e:
                                 _LOGGER.error(f"「{title}」首字母排序失败,原因：{e}\n")
                 else:
-                    _LOGGER.info(f"「{title}」排序首字母为 ['{video.titleSort}']已锁定，不需要重新排序\n")
+                    _LOGGER.info(f"「{title}」排序首字母为 ['{video_titleSort}']已锁定，不需要重新排序\n")
                 break
-            except Exception as e:
-                _LOGGER.error(f"{plugins_name}第 {i+1}/{max_retry} 次处理 ['{title}'] 首字母排序异常，原因：{e}")
-                ######################
-                self.connected = False
+            except ConnectTimeoutError as e:
+                _LOGGER.error(f"{plugins_name}第 {i+1}/{max_retry} 次处理 ['{title}'] 首字母排序异常，连接失败等待10秒重连，原因：{e}")
                 time.sleep(10)
+                self.connected = False
                 self.connect_plex()
                 reconnect_falg = True
-                ######################
+                continue
+            except Exception as e:
+                _LOGGER.error(f"{plugins_name}第 {i+1}/{max_retry} 次处理 ['{title}'] 首字母排序异常，原因：{e}")
+                time.sleep(10)
                 continue
 
     def add_top250(self,video):
@@ -446,11 +461,12 @@ class plexsortout:
 
     def process_tag(self,video):
         reconnect_falg = False
+        error_falg = False
         for i in range(max_retry):
             try:
                 title = video.title
-                if not reconnect_falg:
-                    video.reload()
+                if not reconnect_falg and not error_falg:
+                    video.reload(genres=True)
                 selftag=self.config_SelfGenres.split(',')
                 for tag in selftag:
                     tags[tag.split(':')[0]]=tag.split(':')[1]
@@ -458,11 +474,11 @@ class plexsortout:
                 # # 只有电影类型才需要添加 TOP250 标签
                 # if self.config_Top250 and video.type == 'movie':
                 #     self.add_top250(video)
-
-                if video.genres:
+                genres = None
+                genres = video.genres
+                if genres:
                     # if self.judgegenre(video.genres):
                     # video.reload()
-                    genres = video.genres
                     self.updategenre(video, genres)
                 else:
                     _LOGGER.info(f"「{title}」没有标签，不需要翻译")
@@ -471,15 +487,50 @@ class plexsortout:
                 if self.config_Top250 and video.type == 'movie':
                     self.add_top250(video)
                 break
-            except Exception as e:
-                _LOGGER.error(f"{plugins_name}第 {i+1}/{max_retry} 次处理 ['{title}'] 标签翻译异常，原因：{e}")
-                ######################
-                self.connected = False
+            # try:
+            #     title = video.title
+            #     _LOGGER.error(f"video.genres：{video.genres}")
+            #     # video.reload(timeout=120)
+            #     if not reconnect_falg or not error_falg:
+            #         # video.reload()
+            #         # video.reload('genres')
+            #         video.reload(genres=True)
+            #     selftag=self.config_SelfGenres.split(',')
+            #     for tag in selftag:
+            #         tags[tag.split(':')[0]]=tag.split(':')[1]
+
+            #     # # 只有电影类型才需要添加 TOP250 标签
+            #     # if self.config_Top250 and video.type == 'movie':
+            #     #     self.add_top250(video)
+                
+            #     genres = None
+            #     genres = video.genres
+            #     _LOGGER.error(f"video.genres：{genres}")
+            #     if genres:
+            #         # if self.judgegenre(video.genres):
+            #         # video.reload()
+            #         # genres = video.genres
+            #         self.updategenre(video, genres)
+            #     else:
+            #         _LOGGER.info(f"「{title}」没有标签，不需要翻译")
+
+            #     # 只有电影类型才需要添加 TOP250 标签
+            #     if self.config_Top250 and video.type == 'movie':
+            #         self.add_top250(video)
+            #     break
+            except ConnectTimeoutError as e:
+                _LOGGER.error(f"{plugins_name}第 {i+1}/{max_retry} 次处理 ['{title}'] 标签翻译异常，连接失败等待10秒重连，原因：{e}")
                 time.sleep(10)
+                self.connected = False
                 self.connect_plex()
                 reconnect_falg = True
-                ######################
                 continue
+            except Exception as e:
+                _LOGGER.error(f"{plugins_name}第 {i+1}/{max_retry} 次处理 ['{title}'] 标签翻译异常，原因：{e}")
+                time.sleep(10)
+                error_falg = True
+                continue
+
 
     def how_long(self, num):
         total_seconds = num * 3.6
@@ -778,7 +829,7 @@ class plexsortout:
                 video = self.plexserver.fetchItem(int(rating_key))
                 break
             except Exception as e:
-                _LOGGER.error(f"{plugins_name} 第 {retry_count}/{max_retry} 获取新添加的媒体对象失败，原因：{e}")
+                _LOGGER.error(f"{plugins_name} 第 {retry_count+1}/{max_retry} 获取新添加的媒体对象失败，原因：{e}")
                 time.sleep(15)
                 self.connect_plex()
                 continue
@@ -798,7 +849,7 @@ class plexsortout:
                         editvideo=video
                     break
                 except Exception as e:
-                    _LOGGER.error(f"{plugins_name} 第 {retry_count}/{max_retry} 获取新添加剧集上一级媒体对象失败，原因：{e}")
+                    _LOGGER.error(f"{plugins_name} 第 {retry_count+1}/{max_retry} 获取新添加剧集上一级媒体对象失败，原因：{e}")
                     time.sleep(15)
                     self.connect_plex()
                     continue
