@@ -219,11 +219,11 @@ class plexsortout:
 
     def get_locked_info(self, video):
         locked_info = []
-        reconnect_falg = False
+        reconnect_flag = False
         for i in range(max_retry):
             try:
                 title = video.title
-                # if reconnect_falg:
+                # if reconnect_flag:
                 #     # video.reload()
                 # video.reload(fields=True)
                 locked_info = video.fields
@@ -237,7 +237,7 @@ class plexsortout:
                 time.sleep(10)
                 self.connected = False
                 self.connect_plex()
-                reconnect_falg = True
+                reconnect_flag = True
                 continue
             except Exception as e:
                 _LOGGER.error(f"{plugins_name}第 {i+1}/{max_retry} 次获取 ['{title}'] 元数据锁定情况失败，原因：{e}")
@@ -247,11 +247,11 @@ class plexsortout:
         
     # 解锁海报和背景
     def process_unlock_poster_and_art(self,video):
-        reconnect_falg = False
+        reconnect_flag = False
         for i in range(max_retry):
             try:
                 title = video.title
-                # if reconnect_falg:
+                # if reconnect_flag:
                 #     video.reload()
                 video.unlockArt()
                 video.unlockPoster()
@@ -262,7 +262,7 @@ class plexsortout:
                 time.sleep(10)
                 self.connected = False
                 self.connect_plex()
-                reconnect_falg = True
+                reconnect_flag = True
                 continue
             except Exception as e:
                 _LOGGER.error(f"{plugins_name}第 {i+1}/{max_retry} 次解锁 ['{title}'] 海报和背景异常，原因：{e}")
@@ -272,11 +272,11 @@ class plexsortout:
 
     # 锁定海报和背景
     def process_lock_poster_and_art(self,video):
-        reconnect_falg = False
+        reconnect_flag = False
         for i in range(max_retry):
             try:
                 title = video.title
-                # if reconnect_falg:
+                # if reconnect_flag:
                 #     video.reload()
                 video.lockArt()
                 video.lockPoster()
@@ -287,7 +287,7 @@ class plexsortout:
                 time.sleep(10)
                 self.connected = False
                 self.connect_plex()
-                reconnect_falg = True
+                reconnect_flag = True
                 continue
             except Exception as e:
                 _LOGGER.error(f"{plugins_name}第 {i+1}/{max_retry} 次锁定 ['{title}'] 海报和背景异常，原因：{e}")
@@ -295,11 +295,11 @@ class plexsortout:
                 continue
     # 筛选fanart封面
     def process_fanart(self,video,locked_info):
-        reconnect_falg = False
+        reconnect_flag = False
         for i in range(max_retry):
             try:
                 title = video.title
-                # if reconnect_falg:
+                # if reconnect_flag:
                 #     video.reload()
                 if {'art', 'thumb'}.issubset(field.name for field in locked_info):
                     _LOGGER.info(f'「{title}」当前海报和背景已经锁定，不做修改！')
@@ -369,7 +369,7 @@ class plexsortout:
                 time.sleep(10)
                 self.connected = False
                 self.connect_plex()
-                reconnect_falg = True
+                reconnect_flag = True
                 continue
             except Exception as e:
                 _LOGGER.error(f"{plugins_name}第 {i+1}/{max_retry} 次处理 ['{title}'] Fanart 封面筛选异常，原因：{e}")
@@ -378,11 +378,11 @@ class plexsortout:
             
     # 排序修改为首字母
     def process_sorttitle(self,video,locked_info):
-        reconnect_falg = False
+        reconnect_flag = False
         for i in range(max_retry):
             try:
                 title = video.title
-                # if reconnect_falg:
+                # if reconnect_flag:
                 #     video.reload()
                 video_titleSort = video.titleSort
                 if 'titleSort' not in [field.name for field in locked_info]:
@@ -405,7 +405,7 @@ class plexsortout:
                 time.sleep(10)
                 self.connected = False
                 self.connect_plex()
-                reconnect_falg = True
+                reconnect_flag = True
                 continue
             except Exception as e:
                 _LOGGER.error(f"{plugins_name}第 {i+1}/{max_retry} 次处理 ['{title}'] 首字母排序异常，原因：{e}")
@@ -460,12 +460,12 @@ class plexsortout:
                     _LOGGER.info(f"「{title}」已添加 ['豆瓣TOP 250'] 标签")
 
     def process_tag(self,video):
-        reconnect_falg = False
-        error_falg = False
+        reconnect_flag = False
+        error_flag = False
         for i in range(max_retry):
             try:
                 title = video.title
-                if not reconnect_falg and not error_falg:
+                if not reconnect_flag and not error_flag:
                     video.reload(genres=True)
                 selftag=self.config_SelfGenres.split(',')
                 for tag in selftag:
@@ -491,7 +491,7 @@ class plexsortout:
             #     title = video.title
             #     _LOGGER.error(f"video.genres：{video.genres}")
             #     # video.reload(timeout=120)
-            #     if not reconnect_falg or not error_falg:
+            #     if not reconnect_flag or not error_flag:
             #         # video.reload()
             #         # video.reload('genres')
             #         video.reload(genres=True)
@@ -523,12 +523,12 @@ class plexsortout:
                 time.sleep(10)
                 self.connected = False
                 self.connect_plex()
-                reconnect_falg = True
+                reconnect_flag = True
                 continue
             except Exception as e:
                 _LOGGER.error(f"{plugins_name}第 {i+1}/{max_retry} 次处理 ['{title}'] 标签翻译异常，原因：{e}")
                 time.sleep(10)
-                error_falg = True
+                error_flag = True
                 continue
 
 
