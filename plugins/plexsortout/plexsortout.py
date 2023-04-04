@@ -141,7 +141,8 @@ class plexsortout:
         self.config_SelfGenres = self.config.get('SelfGenres')
         self.config_LIBRARY = self.config.get('LIBRARY')
         self.config_mbot_url = self.config.get('mbot_url')
-        webhook_url = f'{self.config_mbot_url}/api/plugins/get_plex_event/webhook'
+        self.config_mbot_api_key = self.config.get('mbot_api_key')
+        webhook_url = f'{self.config_mbot_url}/api/plugins/get_plex_event/webhook?access_key={self.config_mbot_api_key}'
         # 开启webhooks开关
         self.plexserver.settings.get('webHooksEnabled').set(True)
         self.plexserver.settings.get('pushNotificationsEnabled').set(True)
@@ -826,6 +827,8 @@ class plexsortout:
                 if library.type == 'photo': continue
                 collections = library.collections()
                 all_collections.extend(collections)
+        
+        all_collections.sort(key=lambda collection: collection.addedAt, reverse=True)
 
         # 处理合集
         all_collections_count = len(all_collections)
