@@ -30,9 +30,16 @@
     {
       "fieldName": "mbot_url",
       "fieldType": "String",
-      "label": "填写 Mbot URL，用于接收入库事件，示例：http://10.10.10.3:1329",
+      "label": "Mbot URL，接收入库事件，示例：http://10.10.10.3:1329",
       "helperText": "",
       "defaultValue": "http://10.10.10.3:1329"
+    },
+    {
+      "fieldName": "mbot_api_key",
+      "fieldType": "String",
+      "label": "Mbot API KEY，接收入库事件时身份验证",
+      "helperText": "",
+      "defaultValue": ""
     },
     {
       "fieldName": "SortTitle",
@@ -65,7 +72,7 @@
     {
       "fieldName": "tmdb_api_key",
       "fieldType": "String",
-      "label": "填写 TMDB API KEY, 用于更新 TOP250 列表",
+      "label": "TMDB API KEY, 用于更新 TOP250 列表",
       "helperText": "",
       "defaultValue": ""
     },
@@ -86,7 +93,7 @@
     {
       "fieldName": "LIBRARY",
       "fieldType": "String",
-      "label": "要处理的媒体库名称（默认全库：ALL）,英文逗号','间隔",
+      "label": "需整理的媒体库名称（默认全库：ALL）,英文逗号','间隔",
       "helperText": "",
       "defaultValue": "ALL"
     }
