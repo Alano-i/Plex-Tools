@@ -3,6 +3,7 @@ from typing import Dict
 
 from flask import Blueprint, request
 from mbot.common.flaskutils import api_result
+from mbot.register.controller_register import login_required
 import json
 import time
 import threading
@@ -113,9 +114,10 @@ def printAllMembers(cls):
 
 last_event_time = 0
 last_event_count = 1
+
 # 接收 plex 服务器主动发送的事件
-# @login_required() # 若要接口access_key鉴权，则取消注释 
 @plex_webhook.route('/webhook', methods=['POST'])
+@login_required() # 接口access_key鉴权
 def webhook():
     global last_event_time, last_event_count
     payload = request.form['payload']
