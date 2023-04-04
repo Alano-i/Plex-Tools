@@ -194,7 +194,7 @@ class plexsortout:
                 return True
         return False
 
-    def updategenre(self, video, spare_flag, genres):
+    def updategenre(self, video, spare_flag, genres, add_new):
         englist = []
         chlist = []
         for tag in genres:
@@ -211,11 +211,13 @@ class plexsortout:
             video.removeGenre(englist, locked=True)
         else:
             video.addGenre(chlist, locked=True)
-
         if chlist:
             _LOGGER.info(f"「{video.title}」标签翻译整理完成 {chlist}")
         else:
             _LOGGER.info(f"「{video.title}」的标签都是中文，不需要翻译")
+        if add_new:
+            video.reload(genres=True)
+            # video.reload()
 
     #获取 PLEX 服务器所有媒体库
     def get_library(self):
@@ -255,29 +257,17 @@ class plexsortout:
                 guid_id = guid.get("id")
                 guids.append(guid_id)
         else:
-            _LOGGER.error(f"「{video.title}」获取原标签失败")
+            _LOGGER.error(f"「{video.title}」获取影片信息失败")
         return locked_info, genres_all, guids
 
     def get_locked_info(self, video, spare_flag):
-        # try:
-        #     if spare_flag:
-        #         spare_flag = True
-        # except Exception as e:
-        #     spare_flag = False
-        
-        # spare_flag = False
         locked_info = []
         genres_all = []
         guids = []
-        
         reconnect_flag = False
         for i in range(max_retry):
             try:
                 title = video.title
-                # if reconnect_flag:
-                #     # video.reload()
-                # video.reload(fields=True)
-                # locked_info = video.fields
                 if not spare_flag:
                     fields = video.fields
                     for field in fields:
@@ -296,20 +286,19 @@ class plexsortout:
                 self.connected = False
                 self.connect_plex()
                 reconnect_flag = True
+                spare_flag = not spare_flag
                 continue
             except Exception as e:
                 _LOGGER.error(f"{plugins_name}第 {i+1}/{max_retry} 次获取 ['{title}'] 元数据锁定情况失败，原因：{e}")
                 time.sleep(2)
-                spare_flag = True
+                spare_flag = not spare_flag
                 continue
-
         video_info = {
             'locked_info': locked_info,
             'spare_flag': spare_flag,
             'genres_all': genres_all,
             'guids': guids
         }
-        # return video, locked_info, spare_flag, genres_all
         return video, video_info
         
     # 解锁海报和背景
@@ -361,14 +350,11 @@ class plexsortout:
                 continue
     # 筛选fanart封面
     def process_fanart(self,video,video_info):
-        locked_info = video_info.get('locked_info')
+        locked_info = video_info.get('locked_info','')
         reconnect_flag = False
         for i in range(max_retry):
             try:
                 title = video.title
-                # if reconnect_flag:
-                #     video.reload()
-                # if {'art', 'thumb'}.issubset(field.name for field in locked_info):
                 if {'art', 'thumb'}.issubset(field_names for field_names in locked_info):
                     _LOGGER.info(f'「{title}」当前海报和背景已经锁定，不做修改！')
                     return
@@ -446,7 +432,7 @@ class plexsortout:
             
     # 排序修改为首字母
     def process_sorttitle(self,video,video_info):
-        locked_info = video_info.get('locked_info')
+        locked_info = video_info.get('locked_info','')
         reconnect_flag = False
         for i in range(max_retry):
             try:
@@ -478,16 +464,16 @@ class plexsortout:
                 continue
             except Exception as e:
                 _LOGGER.error(f"{plugins_name}第 {i+1}/{max_retry} 次处理 ['{title}'] 首字母排序异常，原因：{e}")
-                time.sleep(10)
+                time.sleep(2)
                 continue
 
     def add_top250(self,video,video_info):
-        spare_flag = video_info.get('spare_flag')
-        genres_all = video_info.get('genres_all')
+        spare_flag = video_info.get('spare_flag','')
+        genres_all = video_info.get('genres_all','')
         title = video.title
         # 获取 imdb_id, tt22399058,[<Guid:imdb://tt0499549>, <Guid:tmdb://19995>, <Guid:tvdb://165>]
         if spare_flag:
-            guids = video_info.get('guids')
+            guids = video_info.get('guids','')
         else:
             guids = video.guids
         imdb_id = ''
@@ -556,39 +542,43 @@ class plexsortout:
                     video.addGenre(chlist, locked=True)
                     _LOGGER.info(f"「{title}」已添加 ['豆瓣TOP 250'] 标签")
 
-    def process_tag(self,video,video_info):
-        spare_flag = video_info.get('spare_flag')
-        genres_all = video_info.get('genres_all')
+    def process_tag(self,video,video_info,add_new):
+        spare_flag = video_info.get('spare_flag',False)
+        genres_all = video_info.get('genres_all','')
         reconnect_flag = False
         error_flag = False
+        genres = None
         for i in range(max_retry):
             try:
                 title = video.title
-                if reconnect_flag or error_flag:
-                    video, video_info = self.get_locked_info(video,True)
-                    locked_info = video_info.get('locked_info')
-                    spare_flag = video_info.get('spare_flag')
-                    genres_all = video_info.get('genres_all')
-
-                elif not spare_flag:
+                # if not reconnect_flag and not error_flag and not spare_flag:
+                if not spare_flag:
                     video.reload(genres=True)
-                    genres_all = video.genres
-
+                    # video.reload()
+                    genres = video.genres
+                
+                if (reconnect_flag or error_flag) and spare_flag:
+                    video, video_info = self.get_locked_info(video,True)
+                    locked_info = video_info.get('locked_info','')
+                    spare_flag = video_info.get('spare_flag',True)
+                    genres_all = video_info.get('genres_all','')
+                    
                 selftag=self.config_SelfGenres.split(',')
                 for tag in selftag:
                     tags[tag.split(':')[0]]=tag.split(':')[1]
-
-                if spare_flag and genres_all:
+                
+                if spare_flag:
                     genres = genres_all
-                else:
-                    genres = None
 
                 if genres:
-                    self.updategenre(video, spare_flag, genres)
+                    self.updategenre(video, spare_flag, genres, add_new)
                 else:
                     _LOGGER.info(f"「{title}」没有标签，不需要翻译")
+
                 # 只有电影类型才需要添加 TOP250 标签
                 if self.config_Top250 and video.type == 'movie':
+                    video_info['spare_flag'] = spare_flag
+                    video_info['genres_all'] = genres
                     self.add_top250(video, video_info)
                 break
             except ConnectTimeoutError as e:
@@ -598,9 +588,11 @@ class plexsortout:
                 self.connect_plex()
                 reconnect_flag = True
                 error_flag = True
+                spare_flag = not spare_flag
                 continue
             except Exception as e:
                 _LOGGER.error(f"{plugins_name}第 {i+1}/{max_retry} 次处理 ['{title}'] 标签翻译异常，原因：{e}")
+                spare_flag = not spare_flag
                 time.sleep(2)
                 error_flag = True
                 continue
@@ -646,7 +638,7 @@ class plexsortout:
 
                 #标签翻译整理
                 if self.config_Genres:
-                    self.process_tag(video, video_info)
+                    self.process_tag(video, video_info, False)
 
                 #首字母排序
                 if self.config_SortTitle:
@@ -749,7 +741,6 @@ class plexsortout:
                 # threading_video_num = int(len(videos)/threading_num)
                 threading_video_num = int(video_num/threading_num)
                 # 将视频名称序列分成100个一组的列表
-                # video_groups = [videos[mnx:mnx+threading_video_num] for mnx in range(0, len(videos), threading_video_num)]
                 video_groups = [videos[mnx:mnx+threading_video_num] for mnx in range(0, video_num, threading_video_num)]
                 # 为每个分组启动一个新的线程，并将其作为参数传递给sss函数
                 all_group_num = len(video_groups)
@@ -797,7 +788,7 @@ class plexsortout:
 
                         #标签翻译整理
                         if self.config_Genres:
-                            self.process_tag(video, video_info)
+                            self.process_tag(video, video_info, False)
 
                         #首字母排序
                         if self.config_SortTitle:
@@ -864,17 +855,15 @@ class plexsortout:
         sortout_num = 6
         recently_added_collections = []
         wait_text = '随机等待 50-70 秒后，处理新入库'
-
-        if org_type == 'movie':
-            _LOGGER.info(f"{plugins_name}{wait_text}电影：['{org_title}']")
-        elif org_type == 'episode':
-            _LOGGER.info(f"{plugins_name}{wait_text}剧集：['{grandparent_title}']")
-        elif org_type == 'season':
-            _LOGGER.info(f"{plugins_name}{wait_text}剧集：['{parent_title}']")
-        else:
-            _LOGGER.info(f"{plugins_name}{wait_text}媒体：['{org_title}']")
-
+        media_types = {
+            'movie': f"电影：['{org_title}']",
+            'episode': f"剧集：['{grandparent_title}']",
+            'season': f"剧集：['{parent_title}']"
+        }
+        media_type_text = media_types.get(org_type, f"媒体：['{org_title}']")
+        _LOGGER.info(f"{plugins_name}{wait_text}{media_type_text}")
         video = None
+        # time.sleep(random.randint(2, 3))
         time.sleep(random.randint(50, 70))
 
         # 指定要获取最近添加项的库
@@ -919,21 +908,23 @@ class plexsortout:
             
             # 获取元数据锁定情况
             # editvideo, locked_info, spare_flag, genres_all = self.get_locked_info(editvideo)
-            editvideo, video_info = self.get_locked_info(editvideo,False)
+            editvideo, video_info = self.get_locked_info(editvideo,True)
+            
             
             # Fanart 精美封面筛选
             if self.config_Poster:
                 self.process_fanart(editvideo,video_info)
             # 标签翻译整理
             if self.config_Genres:
-                self.process_tag(editvideo, video_info)
+                self.process_tag(editvideo, video_info, True)
             # 首字母排序
             if self.config_SortTitle:
                 self.process_sorttitle(editvideo,video_info)
         else:
             _LOGGER.error(f"{plugins_name}在 PLEX 服务器中没有找到媒体: {rating_key}")
 
-        _LOGGER.info(f"{plugins_name}新入库影片：['{video_title}'] 整理完成")
+        # _LOGGER.info(f"{plugins_name}新入库影片：['{video_title}'] 整理完成")
+        _LOGGER.info(f"{plugins_name}新入库{media_type_text} 整理完成")
     
     # 整理指定媒体
     def process_single_video(self, single_videos, spare_flag):
@@ -969,7 +960,7 @@ class plexsortout:
                         self.process_fanart(editvideo,video_info)
                     # 标签翻译整理
                     if self.config_Genres:
-                        self.process_tag(editvideo, video_info)
+                        self.process_tag(editvideo, video_info, False)
                     # 首字母排序
                     if self.config_SortTitle:
                         self.process_sorttitle(editvideo,video_info)
