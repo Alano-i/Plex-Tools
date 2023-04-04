@@ -93,10 +93,10 @@ def single_video(ctx: PluginCommandContext,
                 single_videos: ArgSchema(ArgType.String, '整理指定电影名称的媒体,支持回车换行，一行一条', '', default_value='', required=True),
                 spare_flag: ArgSchema(ArgType.Enum, '启用备用整理方案，默认启用', '', enum_values=lambda: spare_flag_list, default_value='on', multi_value=False, required=False)):
     spare_flag = bool(spare_flag and spare_flag.lower() != 'off')
-    _LOGGER.info(f'{plugins_name}开始手动整理指定电影名称的媒体')
+    _LOGGER.info(f'{plugins_name}开始手动整理指定媒体')
     plexst.process_single_video(single_videos,spare_flag)
     # plexst.process_collection()
-    _LOGGER.info(f'{plugins_name}手动整理指定电影名称的媒体完成')
+    _LOGGER.info(f'{plugins_name}手动整理指定媒体完成')
 
 
 
