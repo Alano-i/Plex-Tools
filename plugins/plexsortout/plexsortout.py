@@ -219,9 +219,16 @@ class plexsortout:
         else:
             _LOGGER.info(f"「{video.title}」的标签都是中文，不需要翻译")
         if add_new and englist:
-            video.reload(genres=True)
-            # video.reload()
-
+            for i in range(3):
+                try:
+                    video.reload(genres=True)
+                    # video.reload()
+                    break
+                except Exception as e:
+                    _LOGGER.info(f"「{video.title}」第 {i+1}/3 次与 PLEX 服务器同步翻译项失败，原因：{e}")
+                    time.sleep(5)
+                    continue
+            
     #获取 PLEX 服务器所有媒体库
     def get_library(self):
         libtable = []
