@@ -198,6 +198,8 @@ class plexsortout:
     def updategenre(self, video, spare_flag, genres, add_new):
         englist = []
         chlist = []
+        enggenre = ''
+        zhQuery = ''
         for tag in genres:
             if spare_flag:
                 enggenre = tag
@@ -216,7 +218,7 @@ class plexsortout:
             _LOGGER.info(f"「{video.title}」标签翻译整理完成 {chlist}")
         else:
             _LOGGER.info(f"「{video.title}」的标签都是中文，不需要翻译")
-        if add_new:
+        if add_new and englist:
             video.reload(genres=True)
             # video.reload()
 
