@@ -871,14 +871,12 @@ class plexsortout:
             'movie': f"电影：['{org_title}']",
             'episode': f"剧集：['{grandparent_title}']",
             'season': f"剧集：['{parent_title}']",
-            'show': f"剧集：['{org_type}']"
+            'show': f"剧集：['{org_title}']"
         }
         media_type_text = media_types.get(org_type, f"媒体 ['{org_type}']：['{org_title}']")
         _LOGGER.info(f"{plugins_name}{wait_text}{media_type_text}")
         video = None
-        # time.sleep(random.randint(2, 3))
         time.sleep(random.randint(50, 70))
-
         # 指定要获取最近添加项的库
         if str(self.config_LIBRARY).lower() != 'all' and self.config_LIBRARY:
             library_names = ''
