@@ -870,9 +870,10 @@ class plexsortout:
         media_types = {
             'movie': f"电影：['{org_title}']",
             'episode': f"剧集：['{grandparent_title}']",
-            'season': f"剧集：['{parent_title}']"
+            'season': f"剧集：['{parent_title}']",
+            'show': f"剧集：['{org_type}']"
         }
-        media_type_text = media_types.get(org_type, f"媒体：['{org_title}']")
+        media_type_text = media_types.get(org_type, f"媒体 ['{org_type}']：['{org_title}']")
         _LOGGER.info(f"{plugins_name}{wait_text}{media_type_text}")
         video = None
         # time.sleep(random.randint(2, 3))
