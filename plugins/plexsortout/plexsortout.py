@@ -726,6 +726,8 @@ class plexsortout:
                 # videos = videos[:video_num]
                 # threading_video_num = int(len(videos)/threading_num)
                 threading_video_num = int(video_num/threading_num)
+                if threading_video_num == 0:
+                    threading_video_num = video_num
                 # 将视频名称序列分成100个一组的列表
                 video_groups = [videos[mnx:mnx+threading_video_num] for mnx in range(0, video_num, threading_video_num)]
                 # 为每个分组启动一个新的线程，并将其作为参数传递给sss函数
