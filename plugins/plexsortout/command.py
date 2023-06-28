@@ -2,7 +2,7 @@ from mbot.core.plugins import plugin, PluginCommandContext, PluginCommandRespons
 from . import plexst
 from mbot.openapi import mbot_api
 from mbot.core.params import ArgSchema, ArgType
-from .get_top250 import get_top250
+from .get_top250 import get_top250, get_lost_top250, get_lost_douban_top250, get_lost_imdb_top250
 import logging
 
 server = mbot_api
@@ -56,6 +56,21 @@ spare_flag_list = [
     }
 ]
 
+lost_top250_list = [
+    {
+        "name": "豆瓣TOP250",
+        "value": 1
+    },
+    {
+        "name": "IMDB TOP250",
+        "value": 2
+    },
+    {
+        "name": "全部",
+        "value": 3
+    }
+]
+
 @plugin.command(name='select_data', title='整理 PLEX 媒体库', desc='自动翻译标签 & 拼音排序 & 添加TOP250标签 & 筛选Fanart封面', icon='MovieFilter',run_in_background=True)
 def select_data(ctx: PluginCommandContext,
                 library: ArgSchema(ArgType.Enum, '选择需要整理的媒体库', '', enum_values=get_enum_data,multi_value=True),
@@ -86,6 +101,18 @@ def get_top250_echo(ctx: PluginCommandContext):
     # server.common.set_cache('top250', 'douban', DouBanTop250)
     get_top250()
     _LOGGER.info(f'{plugins_name}手动获取最新 TOP250 列表完成')
+
+@plugin.command(name='get_lost_douban_top250', title='TOP250缺了哪些', desc='获取缺失的 TOP250 列表', icon='MilitaryTech', run_in_background=True)
+def get_lost_douban_top250_echo(ctx: PluginCommandContext,
+                                lost_top250_config: ArgSchema(ArgType.Enum, '选择查询缺失类型，默认查询缺失的豆瓣TOP250', '', enum_values=lambda: lost_top250_list, default_value=1, multi_value=False, required=False)):
+    _LOGGER.info(f'{plugins_name}开始获取缺失的TOP250列表')
+    if lost_top250_config == 1:
+        get_lost_douban_top250()
+    elif lost_top250_config == 2:
+        get_lost_imdb_top250()
+    else:
+        get_lost_top250()
+    _LOGGER.info(f'{plugins_name}缺失的TOP250列表获取完成')
 
 
 @plugin.command(name='single_video', title='整理 PLEX 媒体', desc='整理指定电影名称的媒体', icon='LocalMovies', run_in_background=True)
