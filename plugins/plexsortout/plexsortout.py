@@ -99,7 +99,6 @@ session.mount('http://', adapter)
 session.mount('https://', adapter)
 
 class plexsortout:
-
     def __init__(self):
         self.connected = False
 
@@ -141,7 +140,6 @@ class plexsortout:
         self.config_LIBRARY = self.config.get('LIBRARY')
         self.config_mbot_url = self.config.get('mbot_url')
         self.config_mbot_api_key = self.config.get('mbot_api_key')
-        webhook_url = f'{self.config_mbot_url}/api/plugins/get_plex_event/webhook?access_key={self.config_mbot_api_key}'
         # 开启webhooks开关
         self.plexserver.settings.get('webHooksEnabled').set(True)
         self.plexserver.settings.get('pushNotificationsEnabled').set(True)
@@ -150,15 +148,17 @@ class plexsortout:
         # all_setting=settings_info._settings
         # ww = self.plexserver.settings.get('webHooksEnabled')
         # ds = self.plexserver.settings.get('pushNotificationsEnabled')
-        # 自动设置 webhooks
-        account = self.plexserver.myPlexAccount()
-        webhooks = account.webhooks()
-        if webhook_url not in webhooks:
-            webhooks.append(webhook_url)
-            account.setWebhooks(webhooks)
-            _LOGGER.info(f"{plugins_name} 已向 PLEX 服务器添加 Webhook")
-        else:
-            _LOGGER.info(f"{plugins_name} PLEX 服务器 Webhook 列表中已添加此 Webhook 链接：{webhook_url}")
+        if self.config_mbot_url and self.config_mbot_api_key:
+            webhook_url = f'{self.config_mbot_url}/api/plugins/get_plex_event/webhook?access_key={self.config_mbot_api_key}'
+            # 自动设置 webhooks
+            account = self.plexserver.myPlexAccount()
+            webhooks = account.webhooks()
+            if webhook_url not in webhooks:
+                webhooks.append(webhook_url)
+                account.setWebhooks(webhooks)
+                _LOGGER.info(f"{plugins_name} 已向 PLEX 服务器添加 Webhook")
+            else:
+                _LOGGER.info(f"{plugins_name} PLEX 服务器 Webhook 列表中已添加此 Webhook 链接：{webhook_url}")
             
     def uniqify(self, seq):
         keys = {}
