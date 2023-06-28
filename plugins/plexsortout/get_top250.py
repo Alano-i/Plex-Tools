@@ -269,9 +269,11 @@ def get_lost_douban_top250():
                 result = server.tmdb.get(MediaType.Movie, tmdb_id)
                 if result:
                     title = result.title
+                    release_date = result.release_date
                 lost_doubantop250 = {
                     "title" : title,
-                    "tmdb_id": tmdb_id
+                    "tmdb_id": tmdb_id,
+                    "release_date": release_date
                 }
                 lost_doubantop250_list.append(lost_doubantop250)
         _LOGGER.info(f'{plugins_name}媒体库中缺失豆瓣Top250： {len(lost_doubantop250_list)} 部电影，如下：\n{lost_doubantop250_list}')
@@ -298,9 +300,11 @@ def get_lost_imdb_top250():
                 result = server.tmdb.get(MediaType.Movie, tmdb_id)
                 if result:
                     title = result.title
+                    release_date = result.release_date
                 lost_imdb_top250 = {
                     "title" : title,
-                    "tmdb_id": tmdb_id
+                    "tmdb_id": tmdb_id,
+                    "release_date": release_date
                 }
                 lost_imdbtop250_list.append(lost_imdb_top250)
         _LOGGER.info(f'{plugins_name}媒体库中缺失 IMDB Top250： {len(lost_imdbtop250_list)} 部电影，如下：\n{lost_imdbtop250_list}')
