@@ -3,7 +3,7 @@
   "title": "Plex工具箱",
   "author": "BeiMou(yewei)",
   "description": "下载完成后，自动进行整理。",
-  "version": "2.2",
+  "version": "2.3",
   "requirements": null,
   "configField": [
     {
@@ -19,6 +19,20 @@
       "label": "PLEX 服务器 TOKEN",
       "helperText": "",
       "defaultValue": ""
+    },
+    {
+      "fieldName": "custom_url",
+      "fieldType": "String",
+      "label": "PLEX 服务器自定义访问 URL",
+      "helperText": "",
+      "defaultValue": ""
+    },
+    {
+      "fieldName": "check",
+      "fieldType": "Bool",
+      "label": "定时检查PLEX设置是否正常",
+      "helperText": "",
+      "defaultValue": true
     },
     {
       "fieldName": "Added",
