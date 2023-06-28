@@ -7,6 +7,7 @@ import time
 from time import sleep
 from mbot.openapi import mbot_api
 from mbot.core.plugins import plugin
+from moviebotapi.core.models import MediaType
 import logging
 from requests.adapters import HTTPAdapter
 from requests.packages.urllib3.util.retry import Retry
@@ -252,6 +253,63 @@ def get_imdb_top_250_cn_name():
             _LOGGER.info(f'{plugins_name}最新「IMDB TOP250」列表与缓存相同，共 {len(imdb_top250_chinese_name)} 部电影，如下：\n{imdb_top250_chinese_name}')
     else:
         _LOGGER.error(f'{plugins_name}获取「IMDB TOP250」列表失败')
+
+def get_lost_douban_top250():
+    _LOGGER.info(f'{plugins_name}开始查询媒体库中缺失的豆瓣 Top250 影片')
+    lost_doubantop250_list = []
+    lost_doubantop250 = {}
+    douban_top250_tmdb_ids = server.common.get_cache('top250', 'douban') or []
+    if not douban_top250_tmdb_ids:
+        douban_top250_tmdb_ids = [278, 10997, 13, 597, 101, 129, 637, 424, 157336, 27205, 37165, 28178, 10376, 20453, 5528, 10681, 10775, 269149, 37257, 21835, 81481, 238, 77338, 1402, 43949, 8392, 746, 354912, 31439, 155, 671, 122, 770, 532753, 14160, 255709, 4935, 389, 517814, 360814, 51533, 25838, 10515, 640, 87827, 365045, 423, 13345, 121, 9475, 804, 11216, 207, 490132, 47759, 120, 603, 240, 8587, 242452, 10451, 550, 453, 4922, 14574, 582, 47002, 100, 10867, 15121, 411088, 19995, 857, 21334, 510, 12445, 274, 120467, 11324, 1954, 1124, 9470, 489, 23128, 673, 680, 18329, 311, 74308, 3082, 53168, 2832, 11423, 807, 4977, 22, 672, 69504, 25538, 37703, 158445, 31512, 398818, 142, 162, 16804, 76, 197, 49026, 745, 11104, 128, 177572, 80, 4291, 37185, 194, 161285, 51739, 294682, 9559, 2517, 210577, 30421, 1100466, 122906, 37797, 336026, 594, 10191, 348678, 242, 10494, 92321, 585, 674, 4348, 10193, 165213, 396535, 20352, 68718, 24238, 54186, 587, 74037, 55157, 9261, 333339, 205596, 526431, 77117, 55156, 10950, 843, 4588, 324786, 209764, 346, 150540, 539, 605, 372058, 176, 359940, 152532, 49519, 292362, 2503, 598, 11471, 205, 47423, 81, 315846, 132344, 497, 77, 39693, 31743, 45380, 265195, 872, 475557, 505192, 62, 295279, 244786, 82690, 14310, 508442, 12405, 425, 26466, 40751, 15804, 16859, 7350, 13398, 89825, 508, 475149, 44214, 16074, 901, 45612, 380, 11036, 334541, 57627, 644, 424694, 8290, 39915, 280, 76341, 548, 12477, 40213, 782, 12429, 16869, 1541, 406997, 220289, 473267, 695932, 604, 313369, 1372, 525832, 1830, 25050, 43824, 122973, 286217, 12444, 33320, 2502, 9345, 18311, 4476, 2501, 8055, 198277, 116745, 675, 1427, 324857, 14069]
+    try:
+        for tmdb_id in douban_top250_tmdb_ids:
+            local_movie = server.media_server.search_by_tmdb(tmdb_id)
+            if not local_movie:
+                #通过tmdbid查询缺失的豆瓣top电影类型的信息
+                result = server.tmdb.get(MediaType.Movie, tmdb_id)
+                if result:
+                    title = result.title
+                lost_doubantop250 = {
+                    "title" : title,
+                    "tmdb_id": tmdb_id
+                }
+                lost_doubantop250_list.append(lost_doubantop250)
+        _LOGGER.info(f'{plugins_name}媒体库中缺失豆瓣Top250： {len(lost_doubantop250_list)} 部电影，如下：\n{lost_doubantop250_list}')
+    except Exception as e:
+        _LOGGER.error(f"{plugins_name}获取媒体库中缺失的豆瓣 Top250 列表失败，原因：{e}")
+def get_lost_imdb_top250():
+    _LOGGER.info(f'{plugins_name}开始查询媒体库中缺失的 IMDB Top250 影片')
+    lost_imdbtop250_list = []
+    imdb_top250_tmdb_ids_list = []
+    imdb_top250_tmdb_id = ''
+    lost_imdb_top250 = {}
+    imdb_top250_tmdb_ids = server.common.get_cache('top250', 'imdb') or []
+    if not imdb_top250_tmdb_ids:
+        imdb_top250_tmdb_ids = ['tt0111161', 'tt0068646', 'tt0468569', 'tt0071562', 'tt0050083', 'tt0108052', 'tt0167260', 'tt0110912', 'tt0120737', 'tt0060196', 'tt0109830', 'tt9362722', 'tt0137523', 'tt0167261', 'tt1375666', 'tt0080684', 'tt0133093', 'tt0099685', 'tt0073486', 'tt0114369', 'tt0038650', 'tt0047478', 'tt0102926', 'tt0120815', 'tt0317248', 'tt0816692', 'tt0118799', 'tt0120689', 'tt0076759', 'tt0103064', 'tt0088763', 'tt0245429', 'tt0253474', 'tt0054215', 'tt6751668', 'tt0110413', 'tt0110357', 'tt0172495', 'tt0120586', 'tt0407887', 'tt2582802', 'tt0482571', 'tt0114814', 'tt0034583', 'tt0095327', 'tt0056058', 'tt1675434', 'tt0027977', 'tt0064116', 'tt0095765', 'tt0047396', 'tt0078748', 'tt0021749', 'tt0078788', 'tt0209144', 'tt1853728', 'tt0082971', 'tt0910970', 'tt0405094', 'tt0043014', 'tt0050825', 'tt4154756', 'tt0081505', 'tt0032553', 'tt0051201', 'tt4633694', 'tt0090605', 'tt0169547', 'tt1345836', 'tt0057012', 'tt0361748', 'tt0364569', 'tt2380307', 'tt0086879', 'tt0114709', 'tt0112573', 'tt0082096', 'tt7286456', 'tt4154796', 'tt0119698', 'tt0119217', 'tt0087843', 'tt5311514', 'tt1187043', 'tt0045152', 'tt0057565', 'tt0180093', 'tt8267604', 'tt0435761', 'tt0086190', 'tt0091251', 'tt0338013', 'tt0062622', 'tt2106476', 'tt0105236', 'tt0056172', 'tt0033467', 'tt0022100', 'tt0044741', 'tt0053125', 'tt0053604', 'tt0052357', 'tt0211915', 'tt0036775', 'tt0066921', 'tt0093058', 'tt0086250', 'tt8503618', 'tt1255953', 'tt0113277', 'tt1049413', 'tt0056592', 'tt0070735', 'tt1832382', 'tt0017136', 'tt0095016', 'tt0119488', 'tt0097576', 'tt0208092', 'tt0040522', 'tt0075314', 'tt0986264', 'tt8579674', 'tt5074352', 'tt0363163', 'tt1745960', 'tt0059578', 'tt0372784', 'tt0012349', 'tt0053291', 'tt10272386', 'tt0993846', 'tt0042192', 'tt6966692', 'tt0055031', 'tt0120382', 'tt0089881', 'tt0112641', 'tt0469494', 'tt0457430', 'tt1130884', 'tt0105695', 'tt0167404', 'tt0107290', 'tt0268978', 'tt0040897', 'tt0055630', 'tt0071853', 'tt0477348', 'tt0266697', 'tt0057115', 'tt0042876', 'tt0084787', 'tt0266543', 'tt10872600', 'tt0080678', 'tt0071315', 'tt0081398', 'tt0434409', 'tt0031381', 'tt0046912', 'tt0347149', 'tt0120735', 'tt2096673', 'tt1305806', 'tt5027774', 'tt1392214', 'tt0117951', 'tt0050212', 'tt6791350', 'tt0116282', 'tt1291584', 'tt1205489', 'tt0264464', 'tt0096283', 'tt0405159', 'tt0118849', 'tt4729430', 'tt0083658', 'tt1201607', 'tt0015864', 'tt2024544', 'tt0112471', 'tt2278388', 'tt0052618', 'tt2267998', 'tt0047296', 'tt0072684', 'tt0017925', 'tt0050986', 'tt0107207', 'tt0077416', 'tt2119532', 'tt0041959', 'tt0353969', 'tt0046268', 'tt0015324', 'tt3011894', 'tt0031679', 'tt1392190', 'tt0978762', 'tt0097165', 'tt0198781', 'tt0892769', 'tt0050976', 'tt0073195', 'tt3170832', 'tt0118715', 'tt0046438', 'tt1950186', 'tt0019254', 'tt0395169', 'tt0382932', 'tt0075148', 'tt0091763', 'tt3315342', 'tt1895587', 'tt0088247', 'tt15097216', 'tt1979320', 'tt0381681', 'tt0092005', 'tt0074958', 'tt0758758', 'tt0032138', 'tt0036868', 'tt0113247', 'tt0070047', 'tt0317705', 'tt0325980', 'tt0035446', 'tt0107048', 'tt0476735', 'tt0032551', 'tt0058946', 'tt1028532', 'tt4016934', 'tt0048473', 'tt0245712', 'tt0032976', 'tt0061512', 'tt0059742', 'tt0025316', 'tt0053198', 'tt0060827', 'tt1454029', 'tt0129167', 'tt0079470', 'tt0103639', 'tt0099348']
+    # 将imdb id转为tmdb id
+    for imdb_id in imdb_top250_tmdb_ids:
+        imdb_top250_tmdb_id = get_tmdb_id(imdb_id, tmdb_api_key)
+        imdb_top250_tmdb_ids_list.append(imdb_top250_tmdb_id)
+    try:
+        for tmdb_id in imdb_top250_tmdb_ids_list:
+            local_movie = server.media_server.search_by_tmdb(tmdb_id)
+            if not local_movie:
+                #通过tmdbid查询缺失的豆瓣top电影类型的信息
+                result = server.tmdb.get(MediaType.Movie, tmdb_id)
+                if result:
+                    title = result.title
+                lost_imdb_top250 = {
+                    "title" : title,
+                    "tmdb_id": tmdb_id
+                }
+                lost_imdbtop250_list.append(lost_imdb_top250)
+        _LOGGER.info(f'{plugins_name}媒体库中缺失 IMDB Top250： {len(lost_imdbtop250_list)} 部电影，如下：\n{lost_imdbtop250_list}')
+    except Exception as e:
+        _LOGGER.error(f"{plugins_name} 获取媒体库中缺失的 IMDB Top250 列表失败，原因：{e}")
+
+def get_lost_top250():
+    get_lost_douban_top250()
+    get_lost_imdb_top250()
 
 def get_top250():
     get_douban_top250_tmdb_list()
