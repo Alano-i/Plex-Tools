@@ -117,10 +117,8 @@ class plexsortout:
     
     def setconfig(self,config):
         self.config = config
-
         self.config_plex_url = self.config.get('plex_url')
         self.config_plex_token = self.config.get('plex_token')
-
         # 创建守护线程来连接Plex服务器
         def keep_connection():
             while True:
@@ -894,8 +892,6 @@ class plexsortout:
             # 获取元数据锁定情况
             # editvideo, locked_info, spare_flag, genres_all = self.get_locked_info(editvideo)
             editvideo, video_info = self.get_locked_info(editvideo,True)
-            
-            
             # Fanart 精美封面筛选
             if self.config_Poster:
                 self.process_fanart(editvideo,video_info)
