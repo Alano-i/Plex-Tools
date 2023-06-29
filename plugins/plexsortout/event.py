@@ -1,6 +1,5 @@
 import logging
 from typing import Dict
-
 from flask import Blueprint, request
 from mbot.common.flaskutils import api_result
 from mbot.register.controller_register import login_required
@@ -8,7 +7,6 @@ import json
 import time
 import threading
 from plexapi.server import PlexServer
-
 from mbot.core.event.models import EventType
 from mbot.core.plugins import PluginContext,PluginMeta,plugin
 from . import plexst
@@ -16,7 +14,6 @@ from .get_top250 import get_top250_config
 
 _LOGGER = logging.getLogger(__name__)
 plugins_name = '「PLEX 工具箱」'
-
 plex_webhook = Blueprint('get_plex_event', __name__)
 """
 把flask blueprint注册到容器
@@ -53,21 +50,7 @@ def after_setup(plugin: PluginMeta, plugin_conf: dict):
             # plugin_conf['library']=libtable
     else:
         _LOGGER.info(f'{plugins_name}未设置需要整理的媒体库名称，将默认整理所有库')
-        # plugin_conf['library'] = 'ALL'
-    
-    # plex_url = plugin_conf.get('plex_url')
-    # plex_token = plugin_conf.get('plex_token')
-    # plex = PlexServer(plex_url, plex_token)
-
-    # # 开启webhooks
-    # settings = plex.settings
-    # if not settings._settings['webHooksEnabled'].value:
-    #     _LOGGER.info(f"{plugins_name}PLEX 的 webhook 开关未打开，将自动打开！")
-    #     settings._settings['webHooksEnabled'].set(True)
-    #     plex.settings.save()
-    # else:
-    #     _LOGGER.info(f"{plugins_name}PLEX 的 webhook 开关已打开")
-    
+        # plugin_conf['library'] = 'ALL'   
     # 传递设置参数
     get_top250_config(plugin_conf)
     plexst.setconfig(plugin_conf)
@@ -103,19 +86,6 @@ def config_changed(plugin_conf: dict):
     else:
         _LOGGER.info(f'{plugins_name}未设置需要整理的媒体库名称，将默认整理所有库')
         # plugin_conf['library'] = 'ALL'
-    
-    # plex_url = plugin_conf.get('plex_url')
-    # plex_token = plugin_conf.get('plex_token')
-    # plex = PlexServer(plex_url, plex_token)
-    
-    # # 开启webhooks
-    # settings = plex.settings
-    # if not settings._settings['webHooksEnabled'].value:
-    #     _LOGGER.info(f"{plugins_name}PLEX 的 webhook 开关未打开，将自动打开！")
-    #     settings._settings['webHooksEnabled'].set(True)
-    #     plex.settings.save()
-    # else:
-    #     _LOGGER.info(f"{plugins_name}PLEX 的 webhook 开关已打开")
     
     # 传递设置参数
     get_top250_config(plugin_conf)
@@ -154,12 +124,8 @@ def set_plex():
     else:
         _LOGGER.error(f'{plugins_name}PLEX URL 或 TOKEN 未设置，无法检查设置')
 
-
-        
-
 last_event_time = 0
 last_event_count = 1
-
 # 接收 plex 服务器主动发送的事件
 @plex_webhook.route('/webhook', methods=['POST'])
 @login_required() # 接口access_key鉴权
@@ -187,10 +153,6 @@ def webhook():
         if library_section_type == 'photo':
             return api_result(code=0, message=plex_event, data=data)
         # _LOGGER.info(f'{plugins_name}接收到 PLEX 通过 Webhook 传过来的「入库事件」，开始分析事件')
-    
-        # thread = threading.Thread(target=plexst.process_new, args=(library_section_title,rating_key,parent_rating_key,grandparent_rating_key,grandparent_title,parent_title,org_title,org_type))
-        # thread.start()
-
         if time.time() - last_event_time < 15:
             last_event_count = last_event_count + 1
             _LOGGER.info(f'{plugins_name}15 秒内接收到 {last_event_count} 条入库事件，只处理一次')
@@ -242,19 +204,6 @@ def set_plex_ckeck():
         except Exception as e:
             _LOGGER.error(f'{plugins_name}检查 PLEX 服务器设置出错，原因: {e}')
 
-
-# @plugin.on_event(
-#     bind_event=['PlexActivityEvent'], order=1)
-# def on_event(ctx: PluginContext, event_type: str, data: Dict):
-#     """
-#     触发绑定的事件后调用此函数
-#     函数接收参数固定。第一个为插件上下文信息，第二个事件类型，第三个事件携带的数据
-#     """
-#     # _LOGGER.info(f'{plugins_name}接收到「PlexActivityEvent」事件，开始整理')
-#     if data.get('Activity') == 'Added' and added:
-#         _LOGGER.info(f'{plugins_name}接收到「PLEX 入库」事件，开始整理')
-#         plexst.process()
-#     # plexst.send_by_event(event_type, data)
 
 # @plugin.on_event(
 #     bind_event=[EventType.DownloadCompleted], order=1)
