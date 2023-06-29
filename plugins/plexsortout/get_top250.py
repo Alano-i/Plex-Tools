@@ -42,7 +42,7 @@ def get_douban_top250_cn_name():
     html = etree.HTML(response.text)
     old_douban_top250_list = server.common.get_cache('top250', 'douban') or []
     # _LOGGER.info(f'{plugins_name}「豆瓣TOP250」列表已有缓存，共 {len(old_douban_top250_list)} 部电影，如下：\n{old_douban_top250_list}')
-    # movies = {}  如果想要 movies = {1: '肖申克的救赎', 2: '霸王别姬', 3: '阿甘正传'}
+    # movies = {}  如果想要 movies = {1: '肖申克的救赎', 2: '霸王别姬', 3: '阿甘正传'} 
     movies = []         #  movies = ['肖申克的救赎', '霸王别姬', '阿甘正传']
     for start in range(0, 250, 25):
         page_url = f'{url}?start={start}'
