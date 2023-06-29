@@ -10,16 +10,6 @@ _LOGGER = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 plugins_name = '「PLEX 工具箱」'
 
-def get_enum_data():
-    """
-    返回一个包含name和value的枚举数据，在前端页面会呈现为下拉列表框；
-    value就是你最终你能接收到的变量值
-    """
-    _LOGGER.info(f'{plugins_name}开始获取媒体库')
-    libtable=plexst.get_library()
-    # _LOGGER.info(f'libtable:{libtable}')
-    return libtable
-
 is_lock_list = [
     {
         "name": "🟢 执行设置中选中的全部操作",
@@ -71,6 +61,15 @@ lost_top250_list = [
     }
 ]
 
+def get_enum_data():
+    """
+    返回一个包含name和value的枚举数据，在前端页面会呈现为下拉列表框；
+    value就是你最终你能接收到的变量值
+    """
+    _LOGGER.info(f'{plugins_name}开始获取媒体库')
+    libtable=plexst.get_library()
+    return libtable
+
 @plugin.command(name='select_data', title='整理 PLEX 媒体库', desc='自动翻译标签 & 拼音排序 & 添加TOP250标签 & 筛选Fanart封面', icon='MovieFilter',run_in_background=True)
 def select_data(ctx: PluginCommandContext,
                 library: ArgSchema(ArgType.Enum, '选择需要整理的媒体库', '', enum_values=get_enum_data,multi_value=True),
@@ -79,8 +78,6 @@ def select_data(ctx: PluginCommandContext,
                 is_lock: ArgSchema(ArgType.Enum, '选择需要执行的操作，留空执行设置中选中的全部操作', '', enum_values=lambda: is_lock_list, default_value='run_all', multi_value=False, required=False),
                 collection_on_config: ArgSchema(ArgType.Enum, '临时启用合集整理，默认关闭', '', enum_values=lambda: collection_on_list, default_value='off', multi_value=False, required=False),
                 spare_flag: ArgSchema(ArgType.Enum, '启用备用整理方案，默认启用', '', enum_values=lambda: spare_flag_list, default_value='on', multi_value=False, required=False)):
-    # plexst.config['library']=library
-    # plexst.process()
     spare_flag = bool(spare_flag and spare_flag.lower() != 'off')
     collection_on_config = bool(collection_on_config and collection_on_config.lower() != 'off')
     threading_num = int(threading_num)
@@ -93,6 +90,7 @@ def select_data(ctx: PluginCommandContext,
             else:
                 mbot_api.notify.send_system_message(user.uid, '手动运行整理 PLEX 媒体库', '锁定 PLEX 海报和背景完毕')
     return PluginCommandResponse(True, f'手动运行整理 PLEX 媒体库完成')
+
     
 @plugin.command(name='get_top250', title='更新 TOP250 列表', desc='获取最新豆瓣和IMDB TOP250 列表', icon='MilitaryTech', run_in_background=True)
 def get_top250_echo(ctx: PluginCommandContext):
@@ -101,6 +99,8 @@ def get_top250_echo(ctx: PluginCommandContext):
     # server.common.set_cache('top250', 'douban', DouBanTop250)
     get_top250()
     _LOGGER.info(f'{plugins_name}手动获取最新 TOP250 列表完成')
+    return PluginCommandResponse(True, f'手动获取最新 TOP250 列表完成')
+
 
 @plugin.command(name='get_lost_top250', title='TOP250缺了哪些', desc='查询媒体库中缺失的 TOP250 列表', icon='MilitaryTech', run_in_background=True)
 def get_lost_douban_top250_echo(ctx: PluginCommandContext,
@@ -112,7 +112,8 @@ def get_lost_douban_top250_echo(ctx: PluginCommandContext,
         get_lost_imdb_top250()
     else:
         get_lost_top250()
-    _LOGGER.info(f'{plugins_name}缺失的TOP250列表获取完成')
+    _LOGGER.info(f'{plugins_name}缺失的 TOP250 列表获取完成')
+    return PluginCommandResponse(True, f'缺失的 TOP250 列表获取完成')
 
 
 @plugin.command(name='single_video', title='整理 PLEX 媒体', desc='整理指定电影名称的媒体', icon='LocalMovies', run_in_background=True)
@@ -122,18 +123,5 @@ def single_video(ctx: PluginCommandContext,
     spare_flag = bool(spare_flag and spare_flag.lower() != 'off')
     _LOGGER.info(f'{plugins_name}开始手动整理指定媒体')
     plexst.process_single_video(single_videos,spare_flag)
-    # plexst.process_collection()
     _LOGGER.info(f'{plugins_name}手动整理指定媒体完成')
-
-
-
-# @plugin.command(name='plexcollection', title='Plex整理合集首字母', desc='自动整理合集首字母', icon='HourglassFull',run_in_background=True)
-# def echo_c(ctx: PluginCommandContext):
-#     plexst.process_collections()
-#     user_list = list(filter(lambda x: x.role == 1, mbot_api.user.list()))
-#     if user_list:
-#         for user in user_list:
-#             mbot_api.notify.send_system_message(user.uid, 'Plex整理合集首字母',
-#                                                 '自动整理合集首字母')
-#     return PluginCommandResponse(True, f'Plex合集整理完成')
-
+    return PluginCommandResponse(True, f'手动整理指定媒体完成')
