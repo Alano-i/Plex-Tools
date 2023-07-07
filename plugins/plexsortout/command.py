@@ -3,6 +3,7 @@ from . import plexst
 from mbot.openapi import mbot_api
 from mbot.core.params import ArgSchema, ArgType
 from .get_top250 import get_top250, get_lost_top250, get_lost_douban_top250, get_lost_imdb_top250
+from .import_to_mbot import push_sub_main
 import logging
 
 server = mbot_api
@@ -67,6 +68,7 @@ def get_enum_data():
     value就是你最终你能接收到的变量值
     """
     _LOGGER.info(f'{plugins_name}开始获取媒体库')
+    
     libtable=plexst.get_library()
     return libtable
 
@@ -78,6 +80,7 @@ def select_data(ctx: PluginCommandContext,
                 is_lock: ArgSchema(ArgType.Enum, '选择需要执行的操作，留空执行设置中选中的全部操作', '', enum_values=lambda: is_lock_list, default_value='run_all', multi_value=False, required=False),
                 collection_on_config: ArgSchema(ArgType.Enum, '临时启用合集整理，默认关闭', '', enum_values=lambda: collection_on_list, default_value='off', multi_value=False, required=False),
                 spare_flag: ArgSchema(ArgType.Enum, '启用备用整理方案，默认启用', '', enum_values=lambda: spare_flag_list, default_value='on', multi_value=False, required=False)):
+    # _LOGGER.info(f'library:{library[0]}')
     spare_flag = bool(spare_flag and spare_flag.lower() != 'off')
     collection_on_config = bool(collection_on_config and collection_on_config.lower() != 'off')
     threading_num = int(threading_num)
@@ -90,6 +93,15 @@ def select_data(ctx: PluginCommandContext,
             else:
                 mbot_api.notify.send_system_message(user.uid, '手动运行整理 PLEX 媒体库', '锁定 PLEX 海报和背景完毕')
     return PluginCommandResponse(True, f'手动运行整理 PLEX 媒体库完成')
+
+@plugin.command(name='import_plex', title='导入 PLEX 媒体', desc='将 PLEX 中的媒体导入到 Mbot 数据库', icon='MovieFilter',run_in_background=True)
+def import_plex(ctx: PluginCommandContext,
+                library: ArgSchema(ArgType.Enum, '选择需要导入的的媒体库', '', enum_values=get_enum_data, multi_value=True)):
+    
+    for i in range(len(library)):
+        _LOGGER.info(f"{plugins_name}开始导入媒体库 ['{library[i]}']")
+        push_sub_main(library[i])
+    return PluginCommandResponse(True, f'导入 PLEX 媒体库到 Mbot 数据库完成')
 
     
 @plugin.command(name='get_top250', title='更新 TOP250 列表', desc='获取最新豆瓣和IMDB TOP250 列表', icon='MilitaryTech', run_in_background=True)
