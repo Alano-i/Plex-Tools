@@ -3,13 +3,13 @@
   "title": "Plex工具箱",
   "author": "BeiMou(yewei)",
   "description": "下载完成后，自动进行整理。",
-  "version": "2.4",
+  "version": "2.6",
   "requirements": null,
   "configField": [
     {
       "fieldName": "plex_url",
       "fieldType": "String",
-      "label": "PLEX 服务器 URL，示例：http://10.10.10.4:32400",
+      "label": "PLEX 服务器 URL，示例：http://10.10.10.3:32400",
       "helperText": "",
       "defaultValue": "http://10.10.10.3:32400"
     },
@@ -32,7 +32,7 @@
       "fieldType": "Bool",
       "label": "定时检查PLEX设置是否正常",
       "helperText": "",
-      "defaultValue": true
+      "defaultValue": false
     },
     {
       "fieldName": "Added",
