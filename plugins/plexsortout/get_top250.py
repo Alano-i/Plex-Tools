@@ -42,7 +42,7 @@ def get_douban_top250_cn_name():
     html = etree.HTML(response.text)
     old_douban_top250_list = server.common.get_cache('top250', 'douban') or []
     # _LOGGER.info(f'{plugins_name}「豆瓣TOP250」列表已有缓存，共 {len(old_douban_top250_list)} 部电影，如下：\n{old_douban_top250_list}')
-    # movies = {}  如果想要 movies = {1: '肖申克的救赎', 2: '霸王别姬', 3: '阿甘正传'} 
+    # movies = {}  如果想要 movies = {1: '肖申克的救赎', 2: '霸王别姬', 3: '阿甘正传'}
     movies = []         #  movies = ['肖申克的救赎', '霸王别姬', '阿甘正传']
     for start in range(0, 250, 25):
         page_url = f'{url}?start={start}'
@@ -212,17 +212,20 @@ def get_imdb_top_250():
     old_imdb_top250_list = server.common.get_cache('top250', 'imdb') or []
     # _LOGGER.info(f'{plugins_name}「IMDB TOP250」列表已有缓存，共 {len(old_imdb_top250_list)} 部电影，如下：\n{old_imdb_top250_list}')
     url = 'https://www.imdb.com/chart/top'
-    for i in range(5):
-        response = session.request("GET", url, headers=headers, timeout=30)
-        if response.status_code == 200:
-            html = etree.HTML(response.text)
-            # 获取 imdbtop250 电影 imdb id
-            imdb_ids = html.xpath('//td[@class="titleColumn"]/a/@href')
-            imdb_ids = [id.split('/')[2] for id in imdb_ids]
-            if imdb_ids:
-                break
-            else:
-                _LOGGER.error(f"{plugins_name} 第 {i+1}/5 次请求 tmdb 网站失败")
+    try:
+        for i in range(5):
+            response = session.request("GET", url, headers=headers, timeout=30)
+            if response.status_code == 200:
+                html = etree.HTML(response.text)
+                # 获取 imdbtop250 电影 imdb id
+                imdb_ids = html.xpath('//td[@class="titleColumn"]/a/@href')
+                imdb_ids = [id.split('/')[2] for id in imdb_ids]
+                if imdb_ids:
+                    break
+                else:
+                    _LOGGER.error(f"{plugins_name} 第 {i+1}/5 次请求 tmdb 网站失败")
+    except Exception as e:
+        _LOGGER.error(f"{plugins_name}获取 IMDB TOP250 失败，原因：{e}")
 
     if imdb_ids:
         if old_imdb_top250_list != imdb_ids and len(imdb_ids) == 250:
@@ -308,7 +311,7 @@ def is_local(tmdb_id):
     return local_flag, title, release_date
 
 def get_lost_douban_top250():
-    _LOGGER.info(f'{plugins_name}开始查询媒体库中缺失的豆瓣 Top250 影片')
+    _LOGGER.info(f'{plugins_name}开始查询媒体库中缺失的豆瓣 TOP250 影片')
     lost_doubantop250_list = []
     lost_doubantop250 = {}
     douban_top250_tmdb_ids = server.common.get_cache('top250', 'douban') or []
@@ -341,13 +344,13 @@ def get_lost_douban_top250():
             #         "release_date": release_date
             #     }
             #     lost_doubantop250_list.append(lost_doubantop250)
-        _LOGGER.info(f'{plugins_name}媒体库中缺失豆瓣Top250： {len(lost_doubantop250_list)} 部电影，如下：\n{lost_doubantop250_list}')
+        _LOGGER.info(f'{plugins_name}媒体库中缺失豆瓣TOP250： {len(lost_doubantop250_list)} 部电影，如下：\n{lost_doubantop250_list}')
     except Exception as e:
-        _LOGGER.error(f"{plugins_name}获取媒体库中缺失的豆瓣 Top250 列表失败，原因：{e}")
+        _LOGGER.error(f"{plugins_name}获取媒体库中缺失的豆瓣 TOP250 列表失败，原因：{e}")
 
 
 def get_lost_imdb_top250():
-    _LOGGER.info(f'{plugins_name}开始查询媒体库中缺失的 IMDB Top250 影片')
+    _LOGGER.info(f'{plugins_name}开始查询媒体库中缺失的 IMDB TOP250 影片')
     lost_imdbtop250_list = []
     imdb_top250_tmdb_ids_list = []
     imdb_top250_tmdb_id = ''
@@ -371,9 +374,9 @@ def get_lost_imdb_top250():
                     "release_date": release_date
                 }
                 lost_imdbtop250_list.append(lost_imdb_top250)
-        _LOGGER.info(f'{plugins_name}媒体库中缺失 IMDB Top250： {len(lost_imdbtop250_list)} 部电影，如下：\n{lost_imdbtop250_list}')
+        _LOGGER.info(f'{plugins_name}媒体库中缺失 IMDB TOP250： {len(lost_imdbtop250_list)} 部电影，如下：\n{lost_imdbtop250_list}')
     except Exception as e:
-        _LOGGER.error(f"{plugins_name} 获取媒体库中缺失的 IMDB Top250 列表失败，原因：{e}")
+        _LOGGER.error(f"{plugins_name} 获取媒体库中缺失的 IMDB TOP250 列表失败，原因：{e}")
 
 def get_lost_top250():
     get_lost_douban_top250()
