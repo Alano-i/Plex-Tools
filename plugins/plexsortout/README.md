@@ -28,7 +28,7 @@ services:
 ```console
 PLEX_PATH=/plex
 MODE=remove
-SCHEDULE=
+SCHEDULE="05:15|daily"
 PLEX_URL=http://10.0.0.1:32400
 PLEX_TOKEN=12345678
 DISCORD=
