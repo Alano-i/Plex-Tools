@@ -76,9 +76,9 @@ def convert_milliseconds(milliseconds):
         return f"{minutes}分钟"
 
 def get_display_title(key):
-    # plex = PlexServer(plex_url, plex_token)
-    # plex_url = plex.url('')
-    # plex_token = plex._token
+    # plexserver = PlexServer(plex_url, plex_token)
+    # plex_url = plexserver.url('')
+    # plex_token = plexserver._token
     url = plex_url + key + '?X-Plex-Token=' + plex_token
     response = requests.get(url)
     if response.status_code == 200:
@@ -102,6 +102,7 @@ def get_display_title(key):
 
 
 def new_poster(media_type,resolution,rdynamic_range,duration,rating,poster_path,title):
+    if media_type in ['show','episode','show']: media_type = 'show'
     try:
         rating = str(rating)
         if rating == '10.0': rating = '10'
@@ -139,7 +140,10 @@ def new_poster(media_type,resolution,rdynamic_range,duration,rating,poster_path,
         blurred_image = new_image.filter(ImageFilter.GaussianBlur(radius=35))
 
         # 创建一个与原始海报相同尺寸的透明黑色层图像
-        black_alpha = 165
+        if media_type == 'movie':
+            black_alpha = 165
+        elif media_type == 'show':
+            black_alpha = 145
         black_layer = Image.new("RGBA", resized_image.size, (0, 0, 0, black_alpha))
 
         # 将高斯模糊后的海报上叠加黑色透明层
@@ -155,7 +159,11 @@ def new_poster(media_type,resolution,rdynamic_range,duration,rating,poster_path,
                     pixels[x0, y0] = (r * a // 255, g * a // 255, b * a // 255, a)
             # 饱和度
             enhancer = ImageEnhance.Color(poster_image)
-            saturation_factor = 1.7  # 饱和度增强因子，大于1增强，小于1减弱
+            if media_type == 'movie':
+                saturation_factor = 1.7  # 饱和度增强因子，大于1增强，小于1减弱
+            elif media_type == 'show':
+                saturation_factor = 1.5
+            
             enhanced_image = enhancer.enhance(saturation_factor)
             # 色阶（对比度）
             enhancer = ImageEnhance.Contrast(enhanced_image)
@@ -329,85 +337,116 @@ def get_local_info(media):
         display_title = ''
     return file_name,duration,size,bitrate,videoResolution,display_title
 
+
+def get_episode(media,media_type,lib_name,force_add):
+    if media_type =='season':
+        rating_key = media.parentRatingKey
+        plexserver = PlexServer(plex_url, plex_token)
+        show = plexserver.fetchItem(int(rating_key))
+        show_year = show.year
+        rating = show.audienceRating or ''
+
+    if media_type =='show':
+        show_year = media.year
+        try:
+            rating = media.audienceRating
+        except Exception as e:
+            rating = ''
+    for episode in media.episodes():
+        add_info_one(episode,'episode','',lib_name,force_add,1,rating,show_year)
+
+    
+def add_info_one(media,media_type,media_n,lib_name,force_add,i,rating,show_year):
+    media_title = ''
+    for v in range(5):
+        try:
+            if media_type == 'movie':
+                rating = media.audienceRating
+                media_title = f"{media.title} ({media.year})"
+                poster_url = media.posterUrl
+            if media_type == 'episode':
+                if not rating or not show_year:
+                    rating_key = media.grandparentRatingKey
+                    plexserver = PlexServer(plex_url, plex_token) 
+                    show = plexserver.fetchItem(int(rating_key))
+                    show_year = show.year
+                    rating = show.audienceRating or ''
+                poster_url = media.posterUrl
+                e = str(media.episodeNumber).zfill(2)
+                s = str(media.parentIndex).zfill(2)
+                t = media.grandparentTitle
+                media_title = f"{t} {show_year} S{s}E{e}"
+            
+            if not lib_name:
+                lib_name = media.librarySectionTitle or ''
+
+            # if media_type in ['show','season']:
+            #     get_episode(media,media_type,lib_name,force_add)
+
+            media_title = media_title or '未知' 
+            if media_n:
+                loger.info(f"{plugins_name}开始处理 {i}/{media_n} ['{media_title}']")
+            else:
+                loger.info(f"{plugins_name}开始处理 ['{media_title}']")
+
+            if poster_url:
+                img_path,overlay_flag = save_img(poster_url,media_title,lib_name)
+                # 上传海报
+                if not overlay_flag or force_add:
+                    file_name,duration,size,bitrate,videoResolution,display_title = get_local_info(media)
+                    out_path = new_poster(media_type,videoResolution,display_title,duration,rating,img_path,media_title)
+                    media.uploadPoster(filepath=out_path)
+                else:
+                    loger.warning(f"['{media_title}'] 已经处理过了，跳过")
+            break
+        except Exception as e:
+            media_title = media_title or '未知' 
+            loger.error(f"{plugins_name}第 {v+1}/5 次处理 ['{media_title}'] 时失败，原因：{e}")
+
 def add_info_to_posters(library,lib_name,force_add):
-    if library.type == 'show':
-        # 获取所有剧集
+    lib_type = library.type
+    if lib_type == 'show':
         shows = library.all()
-        for show in shows:
-            show_year = show.year
-            try:
-                rating = show.audienceRating
-            except Exception as e:
-                rating = ''
-            i=1
-            for episode in show.episodes():
-                for v in range(5):
-                    try:
-                        # if i>1:
-                        #     break
-                        # posters = episode.posters()
-                        poster_url = episode.posterUrl
-                        e = str(episode.episodeNumber).zfill(2)
-                        s = str(episode.parentIndex).zfill(2)
-                        t = episode.grandparentTitle
-                        episode_title = f"{t} {show_year} S{s}E{e}"
-                        loger.info(f"{plugins_name}开始处理['{episode_title}']")
-                        img_path,overlay_flag = save_img(poster_url,episode_title,lib_name)
-                        # 上传海报
-                        if not overlay_flag or force_add:
-                            file_name,duration,size,bitrate,videoResolution,display_title = get_local_info(episode)
-                            out_path = new_poster('show',videoResolution,display_title,duration,rating,img_path,t)
-                            episode.uploadPoster(filepath=out_path)
-                        else:
-                            loger.warning(f"['{episode_title}'] 已经处理过了，跳过")
-                        break
-                    except Exception as e:
-                        loger.error(f"{plugins_name}第 {v+1}/5 次处理 ['{episode_title}'] 时失败，原因：{e}")
-                i=i+1
-        loger.info(f"{plugins_name}剧集海报添加媒体信息完成")
-    elif library.type == 'movie':
+        if shows:
+            for show in shows:
+                show_year = show.year
+                try:
+                    rating = show.audienceRating
+                except Exception as e:
+                    rating = ''
+                i=1
+                for episode in show.episodes():
+                    add_info_one(episode,'episode','',lib_name,force_add,i,rating,show_year)
+                    i=i+1
+            loger.info(f"{plugins_name}媒体库 ['{lib_name}'] 中的剧集海报添加媒体信息完成")
+        else:
+            loger.info(f"{plugins_name}媒体库 ['{lib_name}'] 中没有剧集，不需要处理")
+    elif lib_type == 'movie':
         movies = library.all()
         if movies:
             movies_n = len(movies)
             i=1
             for movie in movies:
-                for v in range(5):
-                    try:
-                        # if i>30:
-                        #     break
-                        try:
-                            rating = movie.audienceRating
-                        except Exception as e:
-                            rating = ''
-                        poster_url = movie.posterUrl
-                        movie_title = f"{movie.title} ({movie.year})" 
-                        loger.info(f"{plugins_name}开始处理 {i}/{movies_n} ['{movie_title}']")
-                        img_path,overlay_flag = save_img(poster_url,movie_title,lib_name)
-                        # loger.warning(f"videoResolution:{videoResolution}")
-                        # loger.warning(f"display_title:{display_title}")
-                        # loger.warning(f"duration:{duration}")
-                        # loger.warning(f"rating:{rating}")
-                        # 上传海报
-                        if not overlay_flag or force_add:
-                            file_name,duration,size,bitrate,videoResolution,display_title = get_local_info(movie)
-                            out_path = new_poster('movie',videoResolution,display_title,duration,rating,img_path,movie_title)
-                            movie.uploadPoster(filepath=out_path)
-                        else:
-                            loger.warning(f"['{movie_title}'] 已经处理过了，跳过")
-                        break
-                    except Exception as e:
-                        loger.error(f"{plugins_name}第 {v+1}/5 次处理 ['{movie_title}'] 时失败，原因：{e}")
+                # if i>30:
+                #     break
+                add_info_one(movie,'movie',movies_n,lib_name,force_add,i,'','')
                 i=i+1
-        loger.info(f"{plugins_name}电影海报添加媒体信息完成")
+            loger.info(f"{plugins_name}媒体库 ['{lib_name}'] 中的电影海报添加媒体信息完成")
+        else:
+            loger.info(f"{plugins_name}媒体库 ['{lib_name}'] 中没有电影，不需要处理")
 
 def add_info_to_posters_main(lib_name,force_add):
     try:
-        plex = PlexServer(plex_url, plex_token) 
+        plexserver = PlexServer(plex_url, plex_token) 
     except Exception as e:
         loger.error(f"{plugins_name}连接 Plex 服务器失败,原因：{e}")
     try:
-        library = plex.library.section(lib_name)
+        library = plexserver.library.section(lib_name)
         add_info_to_posters(library,lib_name,force_add)
     except Exception as e:
         loger.error(f"{plugins_name}海报添加信息出现错误! 原因：{e}")
 
+        # loger.warning(f"videoResolution:{videoResolution}")
+        # loger.warning(f"display_title:{display_title}")
+        # loger.warning(f"duration:{duration}")
+        # loger.warning(f"rating:{rating}")
