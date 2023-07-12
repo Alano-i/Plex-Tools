@@ -95,7 +95,7 @@ def select_data(ctx: PluginCommandContext,
                 mbot_api.notify.send_system_message(user.uid, '手动运行整理 PLEX 媒体库', '锁定 PLEX 海报和背景完毕')
     return PluginCommandResponse(True, f'手动运行整理 PLEX 媒体库完成')
 
-@plugin.command(name='import_plex', title='导入 PLEX 媒体', desc='将 PLEX 中的媒体导入到 Mbot 数据库', icon='MovieFilter',run_in_background=True)
+@plugin.command(name='import_plex', title='导入 PLEX 媒体', desc='将 PLEX 中的媒体导入到 Mbot 数据库', icon='SaveAlt',run_in_background=True)
 def import_plex(ctx: PluginCommandContext,
                 library: ArgSchema(ArgType.Enum, '选择需要导入的的媒体库', '', enum_values=get_enum_data, multi_value=True)):
     
