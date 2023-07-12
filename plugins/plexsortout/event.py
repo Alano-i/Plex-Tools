@@ -12,6 +12,7 @@ from mbot.core.plugins import PluginContext,PluginMeta,plugin
 from . import plexst
 from .get_top250 import get_top250_config
 from .import_to_mbot import import_config
+from .add_info import add_config
 
 _LOGGER = logging.getLogger(__name__)
 plugins_name = '「PLEX 工具箱」'
@@ -55,6 +56,7 @@ def after_setup(plugin: PluginMeta, plugin_conf: dict):
     # 传递设置参数
     get_top250_config(plugin_conf)
     import_config(plugin_conf)
+    add_config(plugin_conf)
     plexst.setconfig(plugin_conf)
     _LOGGER.info(f'{plugins_name}自定义参数加载完成')
     # printAllMembers(plexst)
@@ -92,6 +94,7 @@ def config_changed(plugin_conf: dict):
     # 传递设置参数
     get_top250_config(plugin_conf)
     import_config(plugin_conf)
+    add_config(plugin_conf)
     plexst.setconfig(plugin_conf)
     _LOGGER.info(f'{plugins_name}自定义参数加载完成')
     # printAllMembers(plexst)
