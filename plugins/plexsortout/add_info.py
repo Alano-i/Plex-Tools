@@ -1,5 +1,5 @@
 import requests
-from PIL import Image, ImageDraw, ImageFilter,ImageFont
+from PIL import Image, ImageDraw, ImageFilter,ImageFont,ImageEnhance
 from plexapi.server import PlexServer
 from io import BytesIO
 import xml.etree.ElementTree as ET
@@ -104,6 +104,7 @@ def get_display_title(key):
 def new_poster(media_type,resolution,rdynamic_range,duration,rating,poster_path,title):
     try:
         rating = str(rating)
+        if rating == '10.0': rating = '10'
         if media_type == 'movie':
             poster_width = 1000
             poster_height = 1500
@@ -138,19 +139,30 @@ def new_poster(media_type,resolution,rdynamic_range,duration,rating,poster_path,
         blurred_image = new_image.filter(ImageFilter.GaussianBlur(radius=35))
 
         # 创建一个与原始海报相同尺寸的透明黑色层图像
-        black_alpha = 150
+        black_alpha = 165
         black_layer = Image.new("RGBA", resized_image.size, (0, 0, 0, black_alpha))
 
         # 将高斯模糊后的海报上叠加黑色透明层
         poster_image = Image.alpha_composite(blurred_image, black_layer)
-        # 实现黑色透明层与海报图像混合模式：正片叠底效果
-        # 获取图像像素数据
-        pixels = poster_image.load()
-        # 迭代每个像素并应用正片叠底混合模式
-        for y0 in range(poster_image.height):
-            for x0 in range(poster_image.width):
-                r, g, b, a = pixels[x0, y0]
-                pixels[x0, y0] = (r * a // 255, g * a // 255, b * a // 255, a)
+        try:
+            # 实现黑色透明层与海报图像混合模式：正片叠底效果
+            # 获取图像像素数据
+            pixels = poster_image.load()
+            # 迭代每个像素并应用正片叠底混合模式
+            for y0 in range(poster_image.height):
+                for x0 in range(poster_image.width):
+                    r, g, b, a = pixels[x0, y0]
+                    pixels[x0, y0] = (r * a // 255, g * a // 255, b * a // 255, a)
+            # 饱和度
+            enhancer = ImageEnhance.Color(poster_image)
+            saturation_factor = 1.7  # 饱和度增强因子，大于1增强，小于1减弱
+            enhanced_image = enhancer.enhance(saturation_factor)
+            # 色阶（对比度）
+            enhancer = ImageEnhance.Contrast(enhanced_image)
+            contrast_factor = 1.65  # 色阶增强因子，大于1增强，小于1减弱
+            poster_image = enhancer.enhance(contrast_factor)
+        except Exception as e:
+            loger.error(f'{plugins_name}调整色阶、饱和度、混合模式时发生错误，原因：{e}')
 
         # 创建海报层图像
         poster = Image.new("RGBA", (poster_width, poster_height))
@@ -177,9 +189,9 @@ def new_poster(media_type,resolution,rdynamic_range,duration,rating,poster_path,
         # 在遮罩图像上绘制圆角矩形
         draw = ImageDraw.Draw(outline)
         if media_type == 'movie':
-            draw.rounded_rectangle([(x-2, y-2), (right+2, y + bar_height+2)], radius+2, fill=(255,255,255,25))
+            draw.rounded_rectangle([(x-2, y-2), (right+2, y + bar_height+2)], radius+2, fill=(255,255,255,28))
         elif media_type == 'show':
-            draw.rounded_rectangle([(x-1, y-1), (right+1, y + bar_height+1)], radius+1, fill=(255,255,255,25))
+            draw.rounded_rectangle([(x-1, y-1), (right+1, y + bar_height+1)], radius+1, fill=(255,255,255,28))
 
         # 在新图像上叠加原始海报
         poster.paste(resized_image, (0, 0))
@@ -329,50 +341,64 @@ def add_info_to_posters(library,lib_name,force_add):
                 rating = ''
             i=1
             for episode in show.episodes():
-                # if i>1:
-                #     break
-                # posters = episode.posters()
-                poster_url = episode.posterUrl
-                e = str(episode.episodeNumber).zfill(2)
-                s = str(episode.parentIndex).zfill(2)
-                t = episode.grandparentTitle
-                episode_title = f"{t} {show_year} S{s}E{e}"
-                loger.info(f"{plugins_name}开始处理['{episode_title}']")
-                img_path,overlay_flag = save_img(poster_url,episode_title,lib_name)
-                # 上传海报
-                if not overlay_flag or force_add:
-                    file_name,duration,size,bitrate,videoResolution,display_title = get_local_info(episode)
-                    out_path = new_poster('show',videoResolution,display_title,duration,rating,img_path,t)
-                    episode.uploadPoster(filepath=out_path)
-                else:
-                    loger.warning(f"['{episode_title}'] 已经处理过了，跳过")
+                for v in range(5):
+                    try:
+                        # if i>1:
+                        #     break
+                        # posters = episode.posters()
+                        poster_url = episode.posterUrl
+                        e = str(episode.episodeNumber).zfill(2)
+                        s = str(episode.parentIndex).zfill(2)
+                        t = episode.grandparentTitle
+                        episode_title = f"{t} {show_year} S{s}E{e}"
+                        loger.info(f"{plugins_name}开始处理['{episode_title}']")
+                        img_path,overlay_flag = save_img(poster_url,episode_title,lib_name)
+                        # 上传海报
+                        if not overlay_flag or force_add:
+                            file_name,duration,size,bitrate,videoResolution,display_title = get_local_info(episode)
+                            out_path = new_poster('show',videoResolution,display_title,duration,rating,img_path,t)
+                            episode.uploadPoster(filepath=out_path)
+                        else:
+                            loger.warning(f"['{episode_title}'] 已经处理过了，跳过")
+                        break
+                    except Exception as e:
+                        loger.error(f"{plugins_name}第 {v+1}/5 次处理 ['{episode_title}'] 时失败，原因：{e}")
                 i=i+1
+        loger.info(f"{plugins_name}剧集海报添加媒体信息完成")
     elif library.type == 'movie':
         movies = library.all()
         if movies:
             movies_n = len(movies)
             i=1
             for movie in movies:
-                try:
-                    rating = movie.audienceRating
-                except Exception as e:
-                    rating = ''
-                poster_url = movie.posterUrl
-                movie_title = f"{movie.title} ({movie.year})" 
-                loger.info(f"{plugins_name}开始处理 {i}/{movies_n} ['{movie_title}']")
-                img_path,overlay_flag = save_img(poster_url,movie_title,lib_name)
-                # loger.warning(f"videoResolution:{videoResolution}")
-                # loger.warning(f"display_title:{display_title}")
-                # loger.warning(f"duration:{duration}")
-                # loger.warning(f"rating:{rating}")
-                # 上传海报
-                if not overlay_flag or force_add:
-                    file_name,duration,size,bitrate,videoResolution,display_title = get_local_info(movie)
-                    out_path = new_poster('movie',videoResolution,display_title,duration,rating,img_path,movie_title)
-                    movie.uploadPoster(filepath=out_path)
-                else:
-                    loger.warning(f"['{movie_title}'] 已经处理过了，跳过")
+                for v in range(5):
+                    try:
+                        # if i>30:
+                        #     break
+                        try:
+                            rating = movie.audienceRating
+                        except Exception as e:
+                            rating = ''
+                        poster_url = movie.posterUrl
+                        movie_title = f"{movie.title} ({movie.year})" 
+                        loger.info(f"{plugins_name}开始处理 {i}/{movies_n} ['{movie_title}']")
+                        img_path,overlay_flag = save_img(poster_url,movie_title,lib_name)
+                        # loger.warning(f"videoResolution:{videoResolution}")
+                        # loger.warning(f"display_title:{display_title}")
+                        # loger.warning(f"duration:{duration}")
+                        # loger.warning(f"rating:{rating}")
+                        # 上传海报
+                        if not overlay_flag or force_add:
+                            file_name,duration,size,bitrate,videoResolution,display_title = get_local_info(movie)
+                            out_path = new_poster('movie',videoResolution,display_title,duration,rating,img_path,movie_title)
+                            movie.uploadPoster(filepath=out_path)
+                        else:
+                            loger.warning(f"['{movie_title}'] 已经处理过了，跳过")
+                        break
+                    except Exception as e:
+                        loger.error(f"{plugins_name}第 {v+1}/5 次处理 ['{movie_title}'] 时失败，原因：{e}")
                 i=i+1
+        loger.info(f"{plugins_name}电影海报添加媒体信息完成")
 
 def add_info_to_posters_main(lib_name,force_add):
     try:
