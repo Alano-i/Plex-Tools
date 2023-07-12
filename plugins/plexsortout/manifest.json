@@ -3,7 +3,7 @@
   "title": "Plex工具箱",
   "author": "BeiMou(yewei)",
   "description": "下载完成后，自动进行整理。",
-  "version": "2.6",
+  "version": "2.7",
   "requirements": null,
   "configField": [
     {
