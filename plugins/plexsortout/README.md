@@ -1,12 +1,16 @@
-## 新增为海报添加媒体信息
+# 🌎 PLEX 工具箱
+MR插件，PLEX 工具箱，主要功能如下图所示：
 
-<img width="1628" alt="image" src="https://github.com/Alano-i/Plex-Tools/assets/68833595/aaf76b61-8fba-44f6-96fe-8f0635e1b3d8">
-
+<div align=center><img src="https://github.com/Alano-i/Plex-Tools/assets/68833595/b4d3ea32-ef97-435a-a8c5-8a0723cea8d2" width="852" /></div>
 
 ## 使用说明
 - 将 `plexsortout` 文件夹放到 `Plugins` 文件夹，配置好各项设置。
 
-## 清理不需要的海报图片
+## 为海报添加媒体信息
+
+<img width="1628" alt="image" src="https://github.com/Alano-i/Plex-Tools/assets/68833595/aaf76b61-8fba-44f6-96fe-8f0635e1b3d8">
+
+### 清理不需要的海报图片
 当多次运行添加媒体信息后可能会有一些不需要的海报， [按此项目的方法清理](https://github.com/meisnate12/Plex-Image-Cleanup)
 
 建议使用docker版，Docker Compose 文件示例：
