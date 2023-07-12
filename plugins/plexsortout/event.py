@@ -30,7 +30,7 @@ def after_setup(plugin: PluginMeta, plugin_conf: dict):
     """
     _LOGGER.info(f'{plugins_name}插件开始加载')
     # global added, libtable , plex_url, plex_token
-    global added,collection_on,libtable,libstr
+    global added,collection_on,libtable,libstr,add_media_info
     global plex_url, plex_token,custom_url,mbot_url,mbot_api_key,check
     plex_url = plugin_conf.get('plex_url','')
     plex_token = plugin_conf.get('plex_token','')
@@ -39,6 +39,7 @@ def after_setup(plugin: PluginMeta, plugin_conf: dict):
     mbot_api_key = plugin_conf.get('mbot_api_key','')
     check = plugin_conf.get('check',True)
     added = plugin_conf.get('Added') if plugin_conf.get('Added') else None
+    add_media_info = plugin_conf.get('add_media_info') if plugin_conf.get('add_media_info') else None
     collection_on = plugin_conf.get('Collection') if plugin_conf.get('Collection') else None
     if added:
         _LOGGER.info(f'{plugins_name}启用「PLEX 入库事件」触发整理实时入库的媒体')
@@ -67,7 +68,7 @@ def config_changed(plugin_conf: dict):
     插件变更配置后执行的操作
     """
     _LOGGER.info(f'{plugins_name}配置发生变更，加载新配置')
-    global added,collection_on,libtable,libstr
+    global added,collection_on,libtable,libstr,add_media_info
     global plex_url, plex_token,custom_url,mbot_url,mbot_api_key,check
     plex_url = plugin_conf.get('plex_url','')
     plex_token = plugin_conf.get('plex_token','')
@@ -76,6 +77,7 @@ def config_changed(plugin_conf: dict):
     mbot_api_key = plugin_conf.get('mbot_api_key','')
     check = plugin_conf.get('check',True)
     added = plugin_conf.get('Added') if plugin_conf.get('Added') else None
+    add_media_info = plugin_conf.get('add_media_info') if plugin_conf.get('add_media_info') else None
     collection_on = plugin_conf.get('Collection') if plugin_conf.get('Collection') else None
     if added:
         _LOGGER.info(f'{plugins_name}启用「PLEX 入库事件」触发整理实时入库的媒体')
@@ -158,18 +160,26 @@ def webhook():
         # 如果是照片库直接跳过
         if library_section_type == 'photo':
             return api_result(code=0, message=plex_event, data=data)
-        # _LOGGER.info(f'{plugins_name}接收到 PLEX 通过 Webhook 传过来的「入库事件」，开始分析事件')
-        if time.time() - last_event_time < 15:
-            last_event_count = last_event_count + 1
-            _LOGGER.info(f'{plugins_name}15 秒内接收到 {last_event_count} 条入库事件，只处理一次')
-        else:
-            last_event_time = time.time()
-            last_event_count = 1
-            # time.sleep(60)
-            _LOGGER.info(f'{plugins_name}接收到 PLEX 通过 Webhook 传过来的「入库事件」，开始分析事件')
-            # 执行自动整理
-            thread = threading.Thread(target=plexst.process_new, args=(library_section_title,rating_key,parent_rating_key,grandparent_rating_key,grandparent_title,parent_title,org_title,org_type))
-            thread.start()
+        ########################## 始终处理 ##########################
+        _LOGGER.info(f'{plugins_name}接收到 PLEX 通过 Webhook 传过来的「入库事件」，开始分析事件')
+        # 执行自动整理
+        thread = threading.Thread(target=plexst.process_new, args=(library_section_title,rating_key,parent_rating_key,grandparent_rating_key,grandparent_title,parent_title,org_title,org_type,add_media_info))
+        thread.start()
+        # 等待线程结束
+        # thread.join()
+
+        ########################## 15秒内处理一次 ##########################
+        # if time.time() - last_event_time < 15:
+        #     last_event_count = last_event_count + 1
+        #     _LOGGER.info(f'{plugins_name}15 秒内接收到 {last_event_count} 条入库事件，只处理一次')
+        # else:
+        #     last_event_time = time.time()
+        #     last_event_count = 1
+        #     # time.sleep(60)
+        #     _LOGGER.info(f'{plugins_name}接收到 PLEX 通过 Webhook 传过来的「入库事件」，开始分析事件')
+        #     # 执行自动整理
+        #     thread = threading.Thread(target=plexst.process_new, args=(library_section_title,rating_key,parent_rating_key,grandparent_rating_key,grandparent_title,parent_title,org_title,org_type))
+        #     thread.start()
 
     return api_result(code=0, message=plex_event, data=data)
 
