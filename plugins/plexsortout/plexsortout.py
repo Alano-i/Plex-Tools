@@ -6,6 +6,7 @@ import pypinyin
 import re
 import time
 import threading
+# import feedparser
 from lxml import etree
 import requests
 from requests.adapters import HTTPAdapter
@@ -14,6 +15,7 @@ import random
 from urllib3.exceptions import ConnectTimeoutError
 from mbot.openapi import media_server_manager
 from plexapi.server import PlexServer
+from .add_info import add_info_one, get_episode
 
 server = mbot_api
 RECOVER = 1
@@ -205,7 +207,7 @@ class plexsortout:
             if enggenre in tags.keys():
                 englist.append(enggenre)
                 zhQuery = tags[enggenre]
-                chlist.append(zhQuery)
+                chlist.append(zhQuery) 
         if len(englist) > 0:
             video.addGenre(chlist, locked=False)
             video.removeGenre(englist, locked=True)
@@ -835,7 +837,7 @@ class plexsortout:
         _LOGGER.info(f"{plugins_name}媒体库合集定时整理完成")
 
     # 自动整理指定库最近新添加项
-    def process_new(self, library_section_title, rating_key, parent_rating_key, grandparent_rating_key, grandparent_title, parent_title, org_title, org_type):
+    def process_new(self, library_section_title, rating_key, parent_rating_key, grandparent_rating_key, grandparent_title, parent_title, org_title, org_type,add_media_info):
         sortout_num = 6
         recently_added_collections = []
         wait_text = '随机等待 50-70 秒后，处理新入库'
@@ -901,11 +903,24 @@ class plexsortout:
             # 首字母排序
             if self.config_SortTitle:
                 self.process_sorttitle(editvideo,video_info)
+
+            # 整理结束后执行海报添加媒体信息
+            if rating_key and add_media_info:
+                _LOGGER.info(f'{plugins_name}开始为新入库{media_type_text} 的海报添加媒体信息')
+                force_add = False
+                if org_type in ['show','season']:
+                    get_episode(video,org_type,library_section_title,force_add)
+                if org_type in ['movie','episode']:
+                    add_info_one(video,org_type,'',library_section_title,force_add,'','','')
+            
+            _LOGGER.info(f"{plugins_name}新入库{media_type_text} 整理完成")
+
+
         else:
             _LOGGER.error(f"{plugins_name}在 PLEX 服务器中没有找到媒体: {rating_key}")
 
         # _LOGGER.info(f"{plugins_name}新入库影片：['{video_title}'] 整理完成")
-        _LOGGER.info(f"{plugins_name}新入库{media_type_text} 整理完成")
+        
     
     # 整理指定媒体
     def process_single_video(self, single_videos, spare_flag):
@@ -946,3 +961,4 @@ class plexsortout:
                     if self.config_SortTitle:
                         self.process_sorttitle(editvideo,video_info)
             # _LOGGER.info(f"{plugins_name} {sortout_num} 手动整理指定电影名称的媒体完成")
+
