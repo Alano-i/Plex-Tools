@@ -3,7 +3,7 @@
   "title": "Plex工具箱",
   "author": "BeiMou(yewei)",
   "description": "下载完成后，自动进行整理。",
-  "version": "2.7",
+  "version": "2.8",
   "requirements": null,
   "configField": [
     {
@@ -101,6 +101,13 @@
       "fieldName": "Poster",
       "fieldType": "Bool",
       "label": "筛选 Fanart 精美海报",
+      "helperText": "",
+      "defaultValue": true
+    },
+    {
+      "fieldName": "add_media_info",
+      "fieldType": "Bool",
+      "label": "当有新入库时，自动为该影片海报添加媒体信息",
       "helperText": "",
       "defaultValue": true
     },
