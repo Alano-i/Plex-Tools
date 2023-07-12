@@ -1,3 +1,4 @@
+from .install_package import *
 from mbot.openapi import mbot_api
 from mbot.openapi import media_server_manager
 
@@ -19,6 +20,7 @@ plexst = plexsortout()
 from .event import *
 from .command import *
 from .get_top250 import *
+from .add_info import *
 
 import logging
 _LOGGER = logging.getLogger(__name__)
