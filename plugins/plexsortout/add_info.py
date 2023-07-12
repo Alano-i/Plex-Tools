@@ -107,7 +107,14 @@ def new_poster(media_type,resolution,rdynamic_range,duration,rating,poster_path,
         if media_type == 'movie':
             poster_width = 1000
             poster_height = 1500
-            scale = 1000/1000
+            scale = 1215/1000
+            if resolution == '1080P':
+                scale = 1192/1000
+                duration = duration.replace(' ','')
+            if rdynamic_range =='DV':
+                scale = 1180/1000
+                duration = duration.replace(' ','')
+
         elif media_type == 'show':
             poster_width = 1000
             poster_height = 563
@@ -131,8 +138,8 @@ def new_poster(media_type,resolution,rdynamic_range,duration,rating,poster_path,
         blurred_image = new_image.filter(ImageFilter.GaussianBlur(radius=35))
 
         # 创建一个与原始海报相同尺寸的透明黑色层图像
-        al = 166
-        black_layer = Image.new("RGBA", resized_image.size, (0, 0, 0, al))
+        black_alpha = 150
+        black_layer = Image.new("RGBA", resized_image.size, (0, 0, 0, black_alpha))
 
         # 将高斯模糊后的海报上叠加黑色透明层
         poster_image = Image.alpha_composite(blurred_image, black_layer)
@@ -154,7 +161,10 @@ def new_poster(media_type,resolution,rdynamic_range,duration,rating,poster_path,
         # 在遮罩图像上绘制圆角矩形
         draw = ImageDraw.Draw(mask)
         radius = int(20 * scale)  # 圆角矩形的半径
-        x = int(22 * scale)  # 距离左侧边缘的距离
+        if media_type == 'movie':
+            x = int(22 * scale)-4  # 距离左侧边缘的距离
+        elif media_type == 'show':
+            x = int(22 * scale)
         bottom = int(28 * scale)
         bar_height = int(110 * scale)
         y = poster.height - bottom - bar_height  # 距离底部的距离
@@ -162,9 +172,6 @@ def new_poster(media_type,resolution,rdynamic_range,duration,rating,poster_path,
         y0 = int(22 * scale)
 
         draw.rounded_rectangle([(x, y), (right, y + bar_height)], radius, fill=255)
-
-
-
         # 创建一个与海报相同尺寸的遮罩图像
         outline = Image.new("RGBA", poster.size)
         # 在遮罩图像上绘制圆角矩形
@@ -211,7 +218,10 @@ def new_poster(media_type,resolution,rdynamic_range,duration,rating,poster_path,
         font_path = f'{base_path}/font/fzlth.ttf'
         font_path_n = f'{base_path}/font/ALIBABA_Bold.otf'
         draw = ImageDraw.Draw(poster)
-        font_r = ImageFont.truetype(f"{font_path}", int(54 * scale))
+        if rdynamic_range =='DV' and media_type == 'movie':
+            font_r = ImageFont.truetype(f"{font_path}", int(51 * scale))
+        else:
+            font_r = ImageFont.truetype(f"{font_path}", int(54 * scale))
         font_n = ImageFont.truetype(f"{font_path_n}", int(75 * scale))
 
         # text_width, text_height = draw.textsize(duration, font=font_r)
@@ -223,12 +233,20 @@ def new_poster(media_type,resolution,rdynamic_range,duration,rating,poster_path,
         text_height0 = 52 * scale
 
         y_duration = int(y+bar_height/2 - text_height/2)
-        x_duration = int(x_resolution + resolution_png.width + 20 * scale + rdynamic_range_png.width + 30 * scale)
-        y_n = int(y+bar_height/2 - text_height0/2)
 
         if media_type == 'movie':
-            draw.text((x_duration, y_duration-5 * scale), duration, fill=(255,255,255,255),font=font_r)
-            draw.text((right-30 * scale-text_width0, y_n-23 * scale), rating, fill=(255,155,21,255),font=font_n)
+            x_duration = int(x_resolution + resolution_png.width + 20 * scale + rdynamic_range_png.width + 22 * scale)
+        elif media_type == 'show':
+            x_duration = int(x_resolution + resolution_png.width + 20 * scale + rdynamic_range_png.width + 30 * scale)
+
+        y_n = int(y+bar_height/2 - text_height0/2)
+        if media_type == 'movie':
+            draw.text((x_duration, y_duration-3 * scale), duration, fill=(255,255,255,255),font=font_r)
+            if rdynamic_range =='DV':
+                draw.text((right-26 * scale-text_width0, y_n-23 * scale), rating, fill=(255,155,21,255),font=font_n)
+            else:
+                draw.text((right-30 * scale-text_width0, y_n-23 * scale), rating, fill=(255,155,21,255),font=font_n)
+
         elif media_type == 'show':
             draw.text((x_duration, y_duration-5 * scale+1), duration, fill=(255,255,255,255),font=font_r)
             draw.text((right-30 * scale-text_width0, y_n-23 * scale+2), rating, fill=(255,155,21,255),font=font_n)
@@ -299,7 +317,7 @@ def get_local_info(media):
         display_title = ''
     return file_name,duration,size,bitrate,videoResolution,display_title
 
-def add_info_to_posters(library,lib_name):
+def add_info_to_posters(library,lib_name,force_add):
     if library.type == 'show':
         # 获取所有剧集
         shows = library.all()
@@ -322,7 +340,7 @@ def add_info_to_posters(library,lib_name):
                 loger.info(f"{plugins_name}开始处理['{episode_title}']")
                 img_path,overlay_flag = save_img(poster_url,episode_title,lib_name)
                 # 上传海报
-                if not overlay_flag:
+                if not overlay_flag or force_add:
                     file_name,duration,size,bitrate,videoResolution,display_title = get_local_info(episode)
                     out_path = new_poster('show',videoResolution,display_title,duration,rating,img_path,t)
                     episode.uploadPoster(filepath=out_path)
@@ -335,8 +353,6 @@ def add_info_to_posters(library,lib_name):
             movies_n = len(movies)
             i=1
             for movie in movies:
-                if i>30:
-                    break
                 try:
                     rating = movie.audienceRating
                 except Exception as e:
@@ -350,7 +366,7 @@ def add_info_to_posters(library,lib_name):
                 # loger.warning(f"duration:{duration}")
                 # loger.warning(f"rating:{rating}")
                 # 上传海报
-                if not overlay_flag:
+                if not overlay_flag or force_add:
                     file_name,duration,size,bitrate,videoResolution,display_title = get_local_info(movie)
                     out_path = new_poster('movie',videoResolution,display_title,duration,rating,img_path,movie_title)
                     movie.uploadPoster(filepath=out_path)
@@ -358,14 +374,14 @@ def add_info_to_posters(library,lib_name):
                     loger.warning(f"['{movie_title}'] 已经处理过了，跳过")
                 i=i+1
 
-def add_info_to_posters_main(lib_name):
+def add_info_to_posters_main(lib_name,force_add):
     try:
         plex = PlexServer(plex_url, plex_token) 
     except Exception as e:
         loger.error(f"{plugins_name}连接 Plex 服务器失败,原因：{e}")
     try:
         library = plex.library.section(lib_name)
-        add_info_to_posters(library,lib_name)
+        add_info_to_posters(library,lib_name,force_add)
     except Exception as e:
         loger.error(f"{plugins_name}海报添加信息出现错误! 原因：{e}")
 
