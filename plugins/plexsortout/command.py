@@ -4,6 +4,7 @@ from mbot.openapi import mbot_api
 from mbot.core.params import ArgSchema, ArgType
 from .get_top250 import get_top250, get_lost_top250, get_lost_douban_top250, get_lost_imdb_top250
 from .import_to_mbot import push_sub_main
+from .add_info import add_info_to_posters_main
 import logging
 
 server = mbot_api
@@ -102,6 +103,15 @@ def import_plex(ctx: PluginCommandContext,
         _LOGGER.info(f"{plugins_name}开始导入媒体库 ['{library[i]}']")
         push_sub_main(library[i])
     return PluginCommandResponse(True, f'导入 PLEX 媒体库到 Mbot 数据库完成')
+
+@plugin.command(name='add_info', title='海报添加信息', desc='将媒体主要信息添加到海报', icon='AddPhotoAlternate',run_in_background=True)
+def add_info(ctx: PluginCommandContext,
+                library: ArgSchema(ArgType.Enum, '选择需要处理的的媒体库', '', enum_values=get_enum_data, multi_value=True)):
+    
+    for i in range(len(library)):
+        _LOGGER.info(f"{plugins_name}开始处理媒体库 ['{library[i]}']")
+        add_info_to_posters_main(library[i])
+    return PluginCommandResponse(True, f'将媒体主要信息添加到海报运行完成')
 
     
 @plugin.command(name='get_top250', title='更新 TOP250 列表', desc='获取最新豆瓣和IMDB TOP250 列表', icon='MilitaryTech', run_in_background=True)
