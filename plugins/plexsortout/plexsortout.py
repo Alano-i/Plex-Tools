@@ -851,6 +851,7 @@ class plexsortout:
         _LOGGER.info(f"{plugins_name}{wait_text}{media_type_text}")
         video = None
         time.sleep(random.randint(50, 70))
+
         # 指定要获取最近添加项的库
         if str(self.config_LIBRARY).lower() != 'all' and self.config_LIBRARY:
             library_names = ''
@@ -909,20 +910,16 @@ class plexsortout:
                 _LOGGER.info(f'{plugins_name}开始为新入库{media_type_text} 的海报添加媒体信息')
                 force_add = False
                 restore = False
+                show_log = True
                 if org_type in ['show','season']:
-                    get_episode(video,org_type,library_section_title,force_add,restore)
+                    get_episode(video,org_type,library_section_title,force_add,restore,show_log)
                 if org_type in ['movie','episode']:
-                    add_info_one(video,org_type,'',library_section_title,force_add,'','','',restore)
+                    add_info_one(video,org_type,'',library_section_title,force_add,'','','',restore,show_log)
             
             _LOGGER.info(f"{plugins_name}新入库{media_type_text} 整理完成")
-
-
         else:
             _LOGGER.error(f"{plugins_name}在 PLEX 服务器中没有找到媒体: {rating_key}")
 
-        # _LOGGER.info(f"{plugins_name}新入库影片：['{video_title}'] 整理完成")
-        
-    
     # 整理指定媒体
     def process_single_video(self, single_videos, spare_flag):
         video = None
@@ -962,4 +959,3 @@ class plexsortout:
                     if self.config_SortTitle:
                         self.process_sorttitle(editvideo,video_info)
             # _LOGGER.info(f"{plugins_name} {sortout_num} 手动整理指定电影名称的媒体完成")
-
