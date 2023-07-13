@@ -1,7 +1,6 @@
 import requests
 from PIL import Image, ImageDraw, ImageFilter,ImageFont,ImageEnhance
 from plexapi.server import PlexServer
-from io import BytesIO
 import xml.etree.ElementTree as ET
 import os
 import time
@@ -10,8 +9,6 @@ import urllib3
 from urllib3.exceptions import MaxRetryError, ConnectionError, TimeoutError
 loger = logging.getLogger(__name__)
 plugins_name = '「PLEX 工具箱」'
-
-# 设置字体文件的路径（根据需要修改）
 base_path = '/data/plugins/plexsortout/overlays'
 
 def add_config(config):
@@ -100,198 +97,162 @@ def get_display_title(key):
                 return display_title
     return ''
 
-
 def new_poster(media_type,resolution,rdynamic_range,duration,rating,poster_path,title):
     if media_type in ['show','episode','season']: media_type = 'show'
+    rating = str(rating)
+    if rating == '10.0': rating = '10'
+    if media_type == 'movie':
+        poster_width = 1000
+        poster_height = 1500
+        scale = 1215/1000
+        if resolution == '1080P':
+            scale = 1192/1000
+            duration = duration.replace(' ','')
+        if rdynamic_range =='DV':
+            scale = 1180/1000
+            duration = duration.replace(' ','')
+    elif media_type == 'show':
+        poster_width = 1000
+        poster_height = 563
+        scale = 700/1000
+    img_path = f'{base_path}/img' 
+    # 打开原始海报图像
+    original_image = Image.open(poster_path)
+    resized_image = original_image.resize((poster_width, poster_height))
+    # 创建一个与海报相同尺寸的新图像(RGBA)
+    new_image = Image.new("RGBA", resized_image.size)
+    new_image.paste(resized_image, (0, 0))
+    # 将改变大小后的海报高斯模糊
+    blurred_image = new_image.filter(ImageFilter.GaussianBlur(radius=35))
+    # 创建一个与原始海报相同尺寸的透明黑色层图像
+    if media_type == 'movie':
+        black_alpha = 165
+    elif media_type == 'show':
+        black_alpha = 145
+    black_layer = Image.new("RGBA", resized_image.size, (0, 0, 0, black_alpha))
+    # 将高斯模糊后的海报上叠加黑色透明层
+    poster_image = Image.alpha_composite(blurred_image, black_layer)
     try:
-        rating = str(rating)
-        if rating == '10.0': rating = '10'
+        # 实现黑色透明层与海报图像混合模式：正片叠底效果
+        # 获取图像像素数据
+        pixels = poster_image.load()
+        # 迭代每个像素并应用正片叠底混合模式
+        for y0 in range(poster_image.height):
+            for x0 in range(poster_image.width):
+                r, g, b, a = pixels[x0, y0]
+                pixels[x0, y0] = (r * a // 255, g * a // 255, b * a // 255, a)
+        # 饱和度
+        enhancer = ImageEnhance.Color(poster_image)
         if media_type == 'movie':
-            poster_width = 1000
-            poster_height = 1500
-            scale = 1215/1000
-            if resolution == '1080P':
-                scale = 1192/1000
-                duration = duration.replace(' ','')
-            if rdynamic_range =='DV':
-                scale = 1180/1000
-                duration = duration.replace(' ','')
-
+            saturation_factor = 1.7  # 饱和度增强因子，大于1增强，小于1减弱
         elif media_type == 'show':
-            poster_width = 1000
-            poster_height = 563
-            scale = 700/1000
-        # resolution = '4k'
-        # rdynamic_range = 'HDR'
-        # rdynamic_range = 'DV'
-        # duration = '2小时 35分钟'
-        # rating = '8.5'
-
-        img_path = f'{base_path}/img' 
-
-        # 打开原始海报图像
-        original_image = Image.open(poster_path)
-        resized_image = original_image.resize((poster_width, poster_height))
-
-        # 创建一个与海报相同尺寸的新图像(RGBA)
-        new_image = Image.new("RGBA", resized_image.size)
-        new_image.paste(resized_image, (0, 0))
-        # 将改变大小后的海报高斯模糊
-        blurred_image = new_image.filter(ImageFilter.GaussianBlur(radius=35))
-
-        # 创建一个与原始海报相同尺寸的透明黑色层图像
-        if media_type == 'movie':
-            black_alpha = 165
-        elif media_type == 'show':
-            black_alpha = 145
-        black_layer = Image.new("RGBA", resized_image.size, (0, 0, 0, black_alpha))
-
-        # 将高斯模糊后的海报上叠加黑色透明层
-        poster_image = Image.alpha_composite(blurred_image, black_layer)
-        try:
-            # 实现黑色透明层与海报图像混合模式：正片叠底效果
-            # 获取图像像素数据
-            pixels = poster_image.load()
-            # 迭代每个像素并应用正片叠底混合模式
-            for y0 in range(poster_image.height):
-                for x0 in range(poster_image.width):
-                    r, g, b, a = pixels[x0, y0]
-                    pixels[x0, y0] = (r * a // 255, g * a // 255, b * a // 255, a)
-            # 饱和度
-            enhancer = ImageEnhance.Color(poster_image)
-            if media_type == 'movie':
-                saturation_factor = 1.7  # 饱和度增强因子，大于1增强，小于1减弱
-            elif media_type == 'show':
-                saturation_factor = 1.5
-            
-            enhanced_image = enhancer.enhance(saturation_factor)
-            # 色阶（对比度）
-            enhancer = ImageEnhance.Contrast(enhanced_image)
-            contrast_factor = 1.65  # 色阶增强因子，大于1增强，小于1减弱
-            poster_image = enhancer.enhance(contrast_factor)
-        except Exception as e:
-            loger.error(f'{plugins_name}调整色阶、饱和度、混合模式时发生错误，原因：{e}')
-
-        # 创建海报层图像
-        poster = Image.new("RGBA", (poster_width, poster_height))
-
-        # 创建一个与海报相同尺寸的遮罩图像
-        mask = Image.new("L", poster.size)
-
-        # 在遮罩图像上绘制圆角矩形
-        draw = ImageDraw.Draw(mask)
-        radius = int(20 * scale)  # 圆角矩形的半径
-        if media_type == 'movie':
-            x = int(22 * scale)-4  # 距离左侧边缘的距离
-        elif media_type == 'show':
-            x = int(22 * scale)
-        bottom = int(28 * scale)
-        bar_height = int(110 * scale)
-        y = poster.height - bottom - bar_height  # 距离底部的距离
-        right = poster.width - x  # 距离右侧边缘的距离
-        y0 = int(22 * scale)
-
-        draw.rounded_rectangle([(x, y), (right, y + bar_height)], radius, fill=255)
-        # 创建一个与海报相同尺寸的遮罩图像
-        outline = Image.new("RGBA", poster.size)
-        # 在遮罩图像上绘制圆角矩形
-        draw = ImageDraw.Draw(outline)
-        if media_type == 'movie':
-            draw.rounded_rectangle([(x-2, y-2), (right+2, y + bar_height+2)], radius+2, fill=(255,255,255,28))
-        elif media_type == 'show':
-            draw.rounded_rectangle([(x-1, y-1), (right+1, y + bar_height+1)], radius+1, fill=(255,255,255,28))
-
-        # 在新图像上叠加原始海报
-        poster.paste(resized_image, (0, 0))
-
-        # 将描边层和海报层叠加
-        poster = Image.alpha_composite(poster, outline)
-
-        # 将高斯模糊后的海报叠加到新海报，并将遮罩应用于模糊图像
-        poster.paste(poster_image, (0, 0), mask=mask)
-
-        png_height = int(62 * scale)
-
-        # 分辨率
-        resolution_png = Image.open(f"{img_path}/{resolution}.png").convert("RGBA")
-        resolution_png = resolution_png.resize((int(png_height*resolution_png.width/resolution_png.height), png_height))
-        # 创建一个与海报图像相同尺寸的图像
-        resolution_image = Image.new("RGBA", poster.size)
-        x_resolution = int(x+22 * scale)
-        y_resolution = int(y+bar_height/2 - resolution_png.height/2)
-
-        resolution_image.paste(resolution_png, (x_resolution, y_resolution))
-        poster = Image.alpha_composite(poster, resolution_image)
-
-        # 动态范围
-        x_rdynamic_range = int(x_resolution + resolution_png.width + 20 * scale)
-
-        rdynamic_range_png = Image.open(f"{img_path}/{rdynamic_range}.png").convert("RGBA")
-        rdynamic_range_png = rdynamic_range_png.resize((int(png_height*rdynamic_range_png.width/rdynamic_range_png.height), png_height))
-        # 创建一个与海报图像相同尺寸的图像
-        rdynamic_range_image = Image.new("RGBA", poster.size)
-
-        rdynamic_range_image.paste(rdynamic_range_png, (x_rdynamic_range, y_resolution))
-        poster = Image.alpha_composite(poster, rdynamic_range_image)
-
-        # 时长
-        font_path = f'{base_path}/font/fzlth.ttf'
-        font_path_n = f'{base_path}/font/ALIBABA_Bold.otf'
-        draw = ImageDraw.Draw(poster)
-        if rdynamic_range =='DV' and media_type == 'movie':
-            font_r = ImageFont.truetype(f"{font_path}", int(51 * scale))
-        else:
-            font_r = ImageFont.truetype(f"{font_path}", int(54 * scale))
-        font_n = ImageFont.truetype(f"{font_path_n}", int(75 * scale))
-
-        # text_width, text_height = draw.textsize(duration, font=font_r)
-        text_width = int(draw.textlength(duration, font_r))
-        text_height = 52 * scale
-
-        # text_width0, text_height0 = draw.textsize(rating, font=font_n)
-        text_width0 = int(draw.textlength(rating, font_n))
-        text_height0 = 52 * scale
-
-        y_duration = int(y+bar_height/2 - text_height/2)
-
-        if media_type == 'movie':
-            x_duration = int(x_resolution + resolution_png.width + 20 * scale + rdynamic_range_png.width + 22 * scale)
-        elif media_type == 'show':
-            x_duration = int(x_resolution + resolution_png.width + 20 * scale + rdynamic_range_png.width + 30 * scale)
-
-        y_n = int(y+bar_height/2 - text_height0/2)
-        if media_type == 'movie':
-            draw.text((x_duration, y_duration-3 * scale), duration, fill=(255,255,255,255),font=font_r)
-            if rdynamic_range =='DV':
-                draw.text((right-26 * scale-text_width0, y_n-23 * scale), rating, fill=(255,155,21,255),font=font_n)
-            else:
-                draw.text((right-30 * scale-text_width0, y_n-23 * scale), rating, fill=(255,155,21,255),font=font_n)
-
-        elif media_type == 'show':
-            draw.text((x_duration, y_duration-5 * scale+1), duration, fill=(255,255,255,255),font=font_r)
-            draw.text((right-30 * scale-text_width0, y_n-23 * scale+2), rating, fill=(255,155,21,255),font=font_n)
-
-        poster = poster.convert("RGB")
-        # poster.save(f"/Users/alano/Documents/py测试/plex/new_poster4.jpg", quality=97)
-
-        # out_path = f"{base_path}/done/{os.path.basename(poster_path)}"
-        out_path = f"{base_path}/tmp.jpg"
-        # poster.save(out_path, quality=97)
-        # 添加自定义的EXIF标签
-        exif_tags = poster.getexif()
-        exif_tags[0x04bc] = "overlay"
-        # 保存图像并将EXIF标签写入
-        poster.save(out_path, quality=97, exif=exif_tags)
-
-        # 读取图片信息，EXIF标签是否是overlay
-        # posterddd = Image.open(out_path)
-        # exif_tags = posterddd.getexif()
-        # if 0x04bc in exif_tags and exif_tags[0x04bc] == "overlay":
-        #     overlay_flag = True
-
-        return out_path
+            saturation_factor = 1.5
+        
+        enhanced_image = enhancer.enhance(saturation_factor)
+        # 色阶（对比度）
+        enhancer = ImageEnhance.Contrast(enhanced_image)
+        contrast_factor = 1.65  # 色阶增强因子，大于1增强，小于1减弱
+        poster_image = enhancer.enhance(contrast_factor)
     except Exception as e:
-        loger.error(f'处理「{title}」时发生错误，原因：{e}')
+        loger.error(f'{plugins_name}调整色阶、饱和度、混合模式时发生错误，原因：{e}')
+    # 创建海报层图像
+    poster = Image.new("RGBA", (poster_width, poster_height))
+    # 创建一个与海报相同尺寸的遮罩图像
+    mask = Image.new("L", poster.size)
+    # 在遮罩图像上绘制圆角矩形
+    draw = ImageDraw.Draw(mask)
+    radius = int(20 * scale)  # 圆角矩形的半径
+    if media_type == 'movie':
+        x = int(22 * scale)-4  # 距离左侧边缘的距离
+    elif media_type == 'show':
+        x = int(22 * scale)
+    bottom = int(28 * scale)
+    bar_height = int(110 * scale)
+    y = poster.height - bottom - bar_height  # 距离底部的距离
+    right = poster.width - x  # 距离右侧边缘的距离
+    y0 = int(22 * scale)
+    draw.rounded_rectangle([(x, y), (right, y + bar_height)], radius, fill=255)
+    # 创建一个与海报相同尺寸的遮罩图像
+    outline = Image.new("RGBA", poster.size)
+    # 在遮罩图像上绘制圆角矩形
+    draw = ImageDraw.Draw(outline)
+    if media_type == 'movie':
+        draw.rounded_rectangle([(x-2, y-2), (right+2, y + bar_height+2)], radius+2, fill=(255,255,255,28))
+    elif media_type == 'show':
+        draw.rounded_rectangle([(x-1, y-1), (right+1, y + bar_height+1)], radius+1, fill=(255,255,255,28))
+    # 在新图像上叠加原始海报
+    poster.paste(resized_image, (0, 0))
+    # 将描边层和海报层叠加
+    poster = Image.alpha_composite(poster, outline)
+    # 将高斯模糊后的海报叠加到新海报，并将遮罩应用于模糊图像
+    poster.paste(poster_image, (0, 0), mask=mask)
+    png_height = int(62 * scale)
+    # 分辨率
+    resolution_png = Image.open(f"{img_path}/{resolution}.png").convert("RGBA")
+    resolution_png = resolution_png.resize((int(png_height*resolution_png.width/resolution_png.height), png_height))
+    # 创建一个与海报图像相同尺寸的图像
+    resolution_image = Image.new("RGBA", poster.size)
+    x_resolution = int(x+22 * scale)
+    y_resolution = int(y+bar_height/2 - resolution_png.height/2)
+    resolution_image.paste(resolution_png, (x_resolution, y_resolution))
+    poster = Image.alpha_composite(poster, resolution_image)
+    # 动态范围
+    x_rdynamic_range = int(x_resolution + resolution_png.width + 20 * scale)
+    rdynamic_range_png = Image.open(f"{img_path}/{rdynamic_range}.png").convert("RGBA")
+    rdynamic_range_png = rdynamic_range_png.resize((int(png_height*rdynamic_range_png.width/rdynamic_range_png.height), png_height))
+    # 创建一个与海报图像相同尺寸的图像
+    rdynamic_range_image = Image.new("RGBA", poster.size)
+    rdynamic_range_image.paste(rdynamic_range_png, (x_rdynamic_range, y_resolution))
+    poster = Image.alpha_composite(poster, rdynamic_range_image)
+    # 时长
+    font_path = f'{base_path}/font/fzlth.ttf'
+    font_path_n = f'{base_path}/font/ALIBABA_Bold.otf'
+    draw = ImageDraw.Draw(poster)
+    if rdynamic_range =='DV' and media_type == 'movie':
+        font_r = ImageFont.truetype(f"{font_path}", int(51 * scale))
+    else:
+        font_r = ImageFont.truetype(f"{font_path}", int(54 * scale))
+    font_n = ImageFont.truetype(f"{font_path_n}", int(75 * scale))
+    # text_width, text_height = draw.textsize(duration, font=font_r)
+    text_width = int(draw.textlength(duration, font_r))
+    text_height = 52 * scale
+    # text_width0, text_height0 = draw.textsize(rating, font=font_n)
+    text_width0 = int(draw.textlength(rating, font_n))
+    text_height0 = 52 * scale
+
+    y_duration = int(y+bar_height/2 - text_height/2)
+    if media_type == 'movie':
+        x_duration = int(x_resolution + resolution_png.width + 20 * scale + rdynamic_range_png.width + 22 * scale)
+    elif media_type == 'show':
+        x_duration = int(x_resolution + resolution_png.width + 20 * scale + rdynamic_range_png.width + 30 * scale)
+
+    y_n = int(y+bar_height/2 - text_height0/2)
+    if media_type == 'movie':
+        draw.text((x_duration, y_duration-3 * scale), duration, fill=(255,255,255,255),font=font_r)
+        if rdynamic_range =='DV':
+            draw.text((right-26 * scale-text_width0, y_n-23 * scale), rating, fill=(255,155,21,255),font=font_n)
+        else:
+            draw.text((right-30 * scale-text_width0, y_n-23 * scale), rating, fill=(255,155,21,255),font=font_n)
+
+    elif media_type == 'show':
+        draw.text((x_duration, y_duration-5 * scale+1), duration, fill=(255,255,255,255),font=font_r)
+        draw.text((right-30 * scale-text_width0, y_n-23 * scale+2), rating, fill=(255,155,21,255),font=font_n)
+
+    poster = poster.convert("RGB")
+    # out_path = f"{base_path}/done/{os.path.basename(poster_path)}"
+    out_path = f"{base_path}/tmp.jpg"
+    # poster.save(out_path, quality=97)
+    # 添加自定义的EXIF标签
+    exif_tags = poster.getexif()
+    exif_tags[0x04bc] = "overlay"
+    # 保存图像并将EXIF标签写入
+    poster.save(out_path, quality=97, exif=exif_tags)
+    # 读取图片信息，EXIF标签是否是overlay
+    # posterddd = Image.open(out_path)
+    # exif_tags = posterddd.getexif()
+    # if 0x04bc in exif_tags and exif_tags[0x04bc] == "overlay":
+    #     overlay_flag = True
+    return out_path
 
 def get_local_info(media):
     # 文件名
@@ -337,7 +298,6 @@ def get_local_info(media):
         display_title = ''
     return file_name,duration,size,bitrate,videoResolution,display_title
 
-
 def get_episode(media,media_type,lib_name,force_add):
     if media_type =='season':
         rating_key = media.parentRatingKey
@@ -355,7 +315,6 @@ def get_episode(media,media_type,lib_name,force_add):
     for episode in media.episodes():
         add_info_one(episode,'episode','',lib_name,force_add,1,rating,show_year)
 
-    
 def add_info_one(media,media_type,media_n,lib_name,force_add,i,rating,show_year):
     media_title = ''
     for v in range(5):
@@ -376,19 +335,13 @@ def add_info_one(media,media_type,media_n,lib_name,force_add,i,rating,show_year)
                 s = str(media.parentIndex).zfill(2)
                 t = media.grandparentTitle
                 media_title = f"{t} {show_year} S{s}E{e}"
-            
             if not lib_name:
                 lib_name = media.librarySectionTitle or ''
-
-            # if media_type in ['show','season']:
-            #     get_episode(media,media_type,lib_name,force_add)
-
             media_title = media_title or '未知' 
             if media_n:
                 loger.info(f"{plugins_name}开始处理 {i}/{media_n} ['{media_title}']")
             else:
                 loger.info(f"{plugins_name}开始处理 ['{media_title}']")
-
             if poster_url:
                 img_path,overlay_flag = save_img(poster_url,media_title,lib_name)
                 # 上传海报
@@ -427,8 +380,6 @@ def add_info_to_posters(library,lib_name,force_add):
             movies_n = len(movies)
             i=1
             for movie in movies:
-                # if i>30:
-                #     break
                 add_info_one(movie,'movie',movies_n,lib_name,force_add,i,'','')
                 i=i+1
             loger.info(f"{plugins_name}媒体库 ['{lib_name}'] 中的电影海报添加媒体信息完成")
