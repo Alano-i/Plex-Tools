@@ -31,12 +31,12 @@ services:
 
 安装好之后，在/config 文件夹下建立环境变量配置文件 `.env`,示例如下：
 ```console
-PLEX_PATH=/plex
+PLEX_PATH=/plex                这里需要修改
 MODE=remove
 SCHEDULE="05:15|daily"
-PLEX_URL=http://10.0.0.1:32400
-PLEX_TOKEN=12345678
-DISCORD=
+PLEX_URL=http://10.0.0.1:32400 这里需要修改
+PLEX_TOKEN=12345678 这里需要修改
+DISCORD=                       这里按需填 DISCORD webhook url,可以收到清理通知
 TIMEOUT=600
 SLEEP=60
 IGNORE_RUNNING=True
