@@ -108,7 +108,7 @@ def import_plex(ctx: PluginCommandContext,
 def add_info(ctx: PluginCommandContext,
                 library: ArgSchema(ArgType.Enum, '选择需要处理的的媒体库', '', enum_values=get_enum_data, multi_value=True),
                 restore_config: ArgSchema(ArgType.Enum, '恢复模式，默认关闭', '开启后恢复所有处理前的原始海报且下方设置失效', enum_values=lambda: collection_on_list, default_value='off', multi_value=False, required=False),
-                force_add_config: ArgSchema(ArgType.Enum, '强制添加模式，默认关闭', '关闭后处理过的海报不再处理', enum_values=lambda: spare_flag_list, default_value='off', multi_value=False, required=False)):
+                force_add_config: ArgSchema(ArgType.Enum, '强制添加模式，默认关闭', '开启：所有海报重新处理。关闭：处理过的海报不再处理', enum_values=lambda: spare_flag_list, default_value='off', multi_value=False, required=False)):
     force_add = bool(force_add_config and force_add_config.lower() != 'off')
     restore = bool(restore_config and restore_config.lower() != 'off')
     show_log = True
