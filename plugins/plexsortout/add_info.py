@@ -298,14 +298,13 @@ def get_local_info(media):
         display_title = ''
     return file_name,duration,size,bitrate,videoResolution,display_title
 
-def get_episode(media,media_type,lib_name,force_add,restore):
+def get_episode(media,media_type,lib_name,force_add,restore,show_log):
     if media_type =='season':
         rating_key = media.parentRatingKey
         plexserver = PlexServer(plex_url, plex_token)
         show = plexserver.fetchItem(int(rating_key))
         show_year = show.year
         rating = show.audienceRating or ''
-
     if media_type =='show':
         show_year = media.year
         try:
@@ -313,9 +312,9 @@ def get_episode(media,media_type,lib_name,force_add,restore):
         except Exception as e:
             rating = ''
     for episode in media.episodes():
-        add_info_one(episode,'episode','',lib_name,force_add,1,rating,show_year,restore)
+        add_info_one(episode,'episode','',lib_name,force_add,1,rating,show_year,restore,show_log)
 
-def add_info_one(media,media_type,media_n,lib_name,force_add,i,rating,show_year,restore):
+def add_info_one(media,media_type,media_n,lib_name,force_add,i,rating,show_year,restore,show_log):
     media_title = ''
     for v in range(5):
         try:
@@ -338,10 +337,11 @@ def add_info_one(media,media_type,media_n,lib_name,force_add,i,rating,show_year,
             if not lib_name:
                 lib_name = media.librarySectionTitle or ''
             media_title = media_title or '未知' 
-            if media_n:
-                loger.info(f"{plugins_name}开始处理 {i}/{media_n} ['{media_title}']")
-            else:
-                loger.info(f"{plugins_name}开始处理 ['{media_title}']")
+            if show_log:
+                if media_n:
+                    loger.info(f"{plugins_name}开始处理 {i}/{media_n} ['{media_title}']")
+                else:
+                    loger.info(f"{plugins_name}开始处理 ['{media_title}']")
 
             img_dir = os.path.join(base_path, f'poster_backup/{lib_name}')
             img_path = os.path.join(img_dir, f"{media_title}.jpg")
@@ -357,13 +357,13 @@ def add_info_one(media,media_type,media_n,lib_name,force_add,i,rating,show_year,
                     out_path = new_poster(media_type,videoResolution,display_title,duration,rating,img_path,media_title)
                     media.uploadPoster(filepath=out_path)
                 else:
-                    loger.warning(f"['{media_title}'] 已经处理过了，跳过")
+                    if show_log: loger.warning(f"['{media_title}'] 已经处理过了，跳过")
             break
         except Exception as e:
             media_title = media_title or '未知' 
             loger.error(f"{plugins_name}第 {v+1}/5 次处理 ['{media_title}'] 时失败，原因：{e}")
 
-def add_info_to_posters(library,lib_name,force_add,restore):
+def add_info_to_posters(library,lib_name,force_add,restore,show_log):
     lib_type = library.type
     if lib_type == 'show':
         shows = library.all()
@@ -376,7 +376,7 @@ def add_info_to_posters(library,lib_name,force_add,restore):
                     rating = ''
                 i=1
                 for episode in show.episodes():
-                    add_info_one(episode,'episode','',lib_name,force_add,i,rating,show_year,restore)
+                    add_info_one(episode,'episode','',lib_name,force_add,i,rating,show_year,restore,show_log)
                     i=i+1
             loger.info(f"{plugins_name}媒体库 ['{lib_name}'] 中的剧集海报添加媒体信息完成")
         else:
@@ -387,20 +387,20 @@ def add_info_to_posters(library,lib_name,force_add,restore):
             movies_n = len(movies)
             i=1
             for movie in movies:
-                add_info_one(movie,'movie',movies_n,lib_name,force_add,i,'','',restore)
+                add_info_one(movie,'movie',movies_n,lib_name,force_add,i,'','',restore,show_log)
                 i=i+1
             loger.info(f"{plugins_name}媒体库 ['{lib_name}'] 中的电影海报添加媒体信息完成")
         else:
             loger.info(f"{plugins_name}媒体库 ['{lib_name}'] 中没有电影，不需要处理")
 
-def add_info_to_posters_main(lib_name,force_add,restore):
+def add_info_to_posters_main(lib_name,force_add,restore,show_log):
     try:
         plexserver = PlexServer(plex_url, plex_token) 
     except Exception as e:
         loger.error(f"{plugins_name}连接 Plex 服务器失败,原因：{e}")
     try:
         library = plexserver.library.section(lib_name)
-        add_info_to_posters(library,lib_name,force_add,restore)
+        add_info_to_posters(library,lib_name,force_add,restore,show_log)
     except Exception as e:
         loger.error(f"{plugins_name}海报添加信息出现错误! 原因：{e}")
 
