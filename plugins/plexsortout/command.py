@@ -107,15 +107,17 @@ def import_plex(ctx: PluginCommandContext,
 @plugin.command(name='add_info', title='海报添加信息', desc='将媒体主要信息添加到海报', icon='AddPhotoAlternate',run_in_background=True)
 def add_info(ctx: PluginCommandContext,
                 library: ArgSchema(ArgType.Enum, '选择需要处理的的媒体库', '', enum_values=get_enum_data, multi_value=True),
-                force_add_config: ArgSchema(ArgType.Enum, '是否强制添加，默认关闭', '关闭后处理过的海报不再处理', enum_values=lambda: spare_flag_list, default_value='off', multi_value=False, required=False)):
+                restore_config: ArgSchema(ArgType.Enum, '恢复模式，默认关闭', '开启后恢复所有处理前的原始海报且下方设置失效', enum_values=lambda: collection_on_list, default_value='off', multi_value=False, required=False),
+                force_add_config: ArgSchema(ArgType.Enum, '强制添加模式，默认关闭', '关闭后处理过的海报不再处理', enum_values=lambda: spare_flag_list, default_value='off', multi_value=False, required=False)):
     force_add = bool(force_add_config and force_add_config.lower() != 'off')
+    restore = bool(restore_config and restore_config.lower() != 'off')
     if force_add:
         force_add_text = '强制添加信息（处理过的海报将重新处理）'
     else:
         force_add_text = '仅处理未处理过的海报'
     for i in range(len(library)):
         _LOGGER.info(f"{plugins_name}开始处理媒体库 ['{library[i]}']，模式: {force_add_text}")
-        add_info_to_posters_main(library[i],force_add)
+        add_info_to_posters_main(library[i],force_add,restore)
     return PluginCommandResponse(True, f'将媒体主要信息添加到海报运行完成')
 
     
