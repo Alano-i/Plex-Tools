@@ -102,7 +102,7 @@ def get_display_title(key):
 
 
 def new_poster(media_type,resolution,rdynamic_range,duration,rating,poster_path,title):
-    if media_type in ['show','episode','show']: media_type = 'show'
+    if media_type in ['show','episode','season']: media_type = 'show'
     try:
         rating = str(rating)
         if rating == '10.0': rating = '10'
