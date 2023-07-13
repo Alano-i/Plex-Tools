@@ -908,10 +908,11 @@ class plexsortout:
             if rating_key and add_media_info:
                 _LOGGER.info(f'{plugins_name}开始为新入库{media_type_text} 的海报添加媒体信息')
                 force_add = False
+                restore = False
                 if org_type in ['show','season']:
-                    get_episode(video,org_type,library_section_title,force_add)
+                    get_episode(video,org_type,library_section_title,force_add,restore)
                 if org_type in ['movie','episode']:
-                    add_info_one(video,org_type,'',library_section_title,force_add,'','','')
+                    add_info_one(video,org_type,'',library_section_title,force_add,'','','',restore)
             
             _LOGGER.info(f"{plugins_name}新入库{media_type_text} 整理完成")
 
