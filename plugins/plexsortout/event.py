@@ -12,7 +12,7 @@ from mbot.core.plugins import PluginContext,PluginMeta,plugin
 from . import plexst
 from .get_top250 import get_top250_config
 from .import_to_mbot import import_config
-from .add_info import add_config
+from .add_info import add_config,add_info_to_posters_main
 
 _LOGGER = logging.getLogger(__name__)
 plugins_name = '「PLEX 工具箱」'
@@ -200,7 +200,7 @@ def task():
     else:
         _LOGGER.info(f'{plugins_name}定时任务启动，未开启合集整理，跳过处理')
 
-@plugin.task('process_recent', '「整理 最近10项」', cron_expression='18 3 * * *')
+@plugin.task('process_recent', '「整理最近10项和添加海报」', cron_expression='18 3 * * *')
 def process_recent():
     if str(libstr).lower() == 'all' or not libstr:
         try:
@@ -210,7 +210,17 @@ def process_recent():
             _LOGGER.error(f"{plugins_name}获取所有媒体库出错，原因：{e}")
     else:
         libtable=libstr.split(',')
+    _LOGGER.info(f"{plugins_name}开始整理媒体库中最近10项")
     plexst.process_all(libtable,'10','run_all',0,False,True)
+    _LOGGER.info(f"{plugins_name}媒体库中最近10项整理完成")
+    show_log = False
+    force_add = False
+    restore = False
+    _LOGGER.info(f"{plugins_name}开始为海报添加媒体信息，已添加信息的海报将自动跳过")
+    for i in range(len(libtable)):
+        add_info_to_posters_main(libtable[i],force_add,restore,show_log)
+    _LOGGER.info(f"{plugins_name}为海报添加媒体信息完成，已自动跳过处理过的海报")
+
 
 @plugin.task('set_plex', '「检查 PLEX 设置」', cron_expression='15 */2 * * *')
 def set_plex_ckeck():
