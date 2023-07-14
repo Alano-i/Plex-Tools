@@ -1,4 +1,7 @@
 # 🌎 PLEX 工具箱
+
+此项目不再维护，[已移至新地址。](https://github.com/Alano-i/wecom-notification/tree/main/MR-Plugins/plex_tools)
+
 MR插件，PLEX 工具箱，主要功能如下图所示：
 
 <div align=center><img src="https://github.com/Alano-i/Plex-Tools/assets/68833595/b4d3ea32-ef97-435a-a8c5-8a0723cea8d2" width="852" /></div>
