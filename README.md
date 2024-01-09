@@ -1,4 +1,5 @@
 # Plex工具集
+此项目不再维护，[已移至新地址。](https://github.com/Alano-i/wecom-notification/tree/main/MR-Plugins/plex_tools)
 ## 新添加 movie-bot 插件脚本,在每个工具的 `MR-Plugins` 文件下下
 ## 无需任何配置 将文件夹 📁 复制到 movie-bot 对应插件文件夹下即可
 打勾为已完成插件
